@@ -12,7 +12,7 @@ export default function MoiPage() {
   useFab({ mode: "moi" });
   const tasks = s.tasks
     .filter((t) => t.is_private && t.owner_id === s.me)
-    .sort((a, b) => Number(a.done) - Number(b.done) || (a.due_date ?? "9").localeCompare(b.due_date ?? "9"));
+    .sort((a, b) => Number(a.done) - Number(b.done) || `${a.due_date ?? "9"}${a.due_time ?? "99"}`.localeCompare(`${b.due_date ?? "9"}${b.due_time ?? "99"}`));
   const goals = s.goals.slice().sort((a, b) => Number(a.achieved) - Number(b.achieved));
   const lists = s.lists.filter((l) => l.is_private && l.owner_id === s.me);
   return (

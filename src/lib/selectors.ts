@@ -107,7 +107,9 @@ export function todayView(s: Snapshot, today: string): TodayView {
   return {
     pickup: pickupOn(s, today),
     appointments: appointmentsOn(s, today),
-    tasks: mine.filter((t) => t.due_date === today),
+    tasks: mine
+      .filter((t) => t.due_date === today)
+      .sort((a, b) => (a.due_time ?? "99").localeCompare(b.due_time ?? "99")),
     overdue: mine
       .filter((t) => t.due_date !== null && t.due_date < today)
       .sort((a, b) => (a.due_date ?? "").localeCompare(b.due_date ?? "")),

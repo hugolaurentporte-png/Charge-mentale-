@@ -73,6 +73,7 @@ export function TaskForm({
   const [title, setTitle] = useState("");
   const [who, setWho] = useState<WhoChoice>(isPrivate ? "me" : "none");
   const [date, setDate] = useState(day ?? "");
+  const [time, setTime] = useState("");
   const opts = useWhoOptions();
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,6 +83,7 @@ export function TaskForm({
         couple_id: s.couple.id,
         title: title.trim(),
         due_date: date || null,
+        due_time: date && time ? time : null,
         is_private: isPrivate,
         assignee_id: isPrivate ? s.me : whoToId(who, s.me, partner?.id),
         topic_id: topicId ?? null,
@@ -105,6 +107,12 @@ export function TaskForm({
         <Label>Quand ?</Label>
         <DateQuick value={date} onChange={setDate} today={today} />
       </div>
+      {date && (
+        <label className="block w-40">
+          <Label>Heure (facultatif)</Label>
+          <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+        </label>
+      )}
       <Button type="submit" className="w-full" disabled={!title.trim()}>
         Ajouter
       </Button>

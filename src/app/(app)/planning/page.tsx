@@ -1,4 +1,5 @@
 "use client";
+import { PushNudge } from "@/components/push";
 import { useState } from "react";
 import Link from "next/link";
 import { useReady } from "@/lib/store";
@@ -44,6 +45,7 @@ function Today() {
           <PickupCard pickup={v.pickup} />
         </div>
       ) : null}
+      <PushNudge />
 
       {v.appointments.length > 0 && (
         <Section title="Rendez-vous">

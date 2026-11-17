@@ -352,6 +352,18 @@ async function api(user, path, init = {}) {
   assert.deepEqual(direct.body, []);
   ok("Le planning ne peut pas être modifié directement via l’API (prise et relais validés côté serveur)");
 
+  // Pour moi : tâche perso avec une heure
+  await tab(h, "Pour moi");
+  await fab(h);
+  await h.getByLabel("Titre", { exact: true }).fill("Kiné");
+  await h.getByRole("button", { name: "Demain", exact: true }).click();
+  await h.getByLabel("Heure (facultatif)").fill("18:15");
+  await h.getByRole("button", { name: "Ajouter", exact: true }).last().click();
+  await see(h, "Kiné");
+  await see(h, "18 h 15");
+  await shot(h, "11-tache-perso-heure");
+  ok("Tâche perso avec une heure : « Kiné » demain à 18 h 15");
+
   await browser.close();
   console.log(`\n${steps.length} vérifications passées.`);
 })().catch(async (err) => {

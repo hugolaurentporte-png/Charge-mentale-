@@ -59,6 +59,7 @@ export interface Task {
   title: string;
   assignee_id: UUID | null;
   due_date: string | null;
+  due_time: string | null;
   done: boolean;
   done_at: string | null;
   is_private: boolean;

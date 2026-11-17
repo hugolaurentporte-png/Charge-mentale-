@@ -3,7 +3,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { useReady } from "@/lib/store";
-import { addDays, relativeDay } from "@/lib/dates";
+import { addDays, formatTime, relativeDay } from "@/lib/dates";
 import type { Task } from "@/lib/types";
 import { AppointmentForm, idToWho, useWhoOptions, whoToId, type WhoChoice } from "./forms";
 import { Badge, Button, Input, Label, Person, Segmented, Sheet, useOptimistic } from "./ui";
@@ -47,6 +47,7 @@ export function TaskRow({ task, overdue = false, showDate = false }: { task: Tas
                 {relativeDay(task.due_date, today)}
               </span>
             )}
+            {task.due_time && <span className="font-semibold text-slate-700">{formatTime(task.due_time)}</span>}
           </div>
         </button>
       </div>
@@ -82,6 +83,7 @@ export function TaskSheet({ task, onClose }: { task: Task; onClose: () => void }
   const [title, setTitle] = useState(task.title);
   const [who, setWho] = useState<WhoChoice>(idToWho(task.assignee_id, s.me));
   const [date, setDate] = useState(task.due_date ?? "");
+  const [time, setTime] = useState(task.due_time?.slice(0, 5) ?? "");
   const [appt, setAppt] = useState(false);
   const opts = useWhoOptions();
   const topic = s.topics.find((t) => t.id === task.topic_id);
@@ -92,6 +94,7 @@ export function TaskSheet({ task, onClose }: { task: Task; onClose: () => void }
         .update({
           title: title.trim() || task.title,
           due_date: date || null,
+          due_time: date && time ? time : null,
           assignee_id: task.is_private ? task.owner_id : whoToId(who, s.me, partner?.id),
         })
         .eq("id", task.id),
@@ -133,6 +136,12 @@ export function TaskSheet({ task, onClose }: { task: Task; onClose: () => void }
             )}
           </div>
         </label>
+        {date && (
+          <label className="block w-40">
+            <Label>Heure (facultatif)</Label>
+            <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+          </label>
+        )}
         {topic && (
           <Link href={`/sujets/voir?id=${topic.id}`} className="block text-sm font-semibold text-slate-600 underline">
             Sujet : {topic.title}

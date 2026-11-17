@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { useReady } from "@/lib/store";
 import { BASE } from "@/lib/base";
 import { Button, Input, Label, Section, Segmented } from "@/components/ui";
+import { PushSettings } from "@/components/push";
 
 export default function ReglagesPage() {
   const { s, run, partner, toast } = useReady();
@@ -104,9 +105,7 @@ export default function ReglagesPage() {
       </Section>
 
       <Section title="Notifications">
-        <p className="rounded-2xl bg-white p-4 text-sm text-slate-600 shadow-sm ring-1 ring-slate-200">
-          Pour l’instant, les rappels et demandes de relais s’affichent dans l’application. Les notifications push arriveront dans une prochaine version.
-        </p>
+        <PushSettings />
       </Section>
 
       <Button
