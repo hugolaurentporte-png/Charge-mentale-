@@ -227,7 +227,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <FabCtx.Provider value={{ ctx, set: setCtx }}>
-      <main className="mx-auto min-h-dvh max-w-md px-4 pb-32">{children}</main>
+      <main className="mx-auto min-h-dvh max-w-md overflow-x-clip px-4 pb-32">{children}</main>
       {ctx && (
         <button
           aria-label="Ajouter"

@@ -7,17 +7,21 @@ import type { GiftStatus, ListItem } from "@/lib/types";
 import { useFab } from "@/components/shell";
 import { GIFT_STATUS, GiftForm, ItemForm } from "@/components/forms";
 import { FavStar } from "@/components/lists";
-import { Badge, Button, Empty, Sheet } from "@/components/ui";
+import { Badge, Button, Empty, Sheet, useOptimistic } from "@/components/ui";
 
 function ItemRow({ item }: { item: ListItem }) {
   const { run } = useReady();
+  const [checked, setChecked] = useOptimistic(item.checked);
   return (
     <div className="flex items-center gap-3 rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200">
       <input
         type="checkbox"
         aria-label={`${item.checked ? "Décocher" : "Cocher"} ${item.label}`}
-        checked={item.checked}
-        onChange={(e) => void run(() => supabase().from("list_items").update({ checked: e.target.checked }).eq("id", item.id))}
+        checked={checked}
+        onChange={(e) => {
+          setChecked(e.target.checked);
+          void run(() => supabase().from("list_items").update({ checked: e.target.checked }).eq("id", item.id));
+        }}
         className="h-6 w-6 shrink-0 accent-slate-900"
       />
       <div className={`min-w-0 flex-1 text-[16px] ${item.checked ? "text-slate-400 line-through" : "font-semibold"}`}>
@@ -88,13 +92,13 @@ function Gifts({ listId, items }: { listId: string; items: ListItem[] }) {
   return (
     <>
       <div className="mt-4 flex gap-2">
-        <select aria-label="Filtrer par destinataire" value={recipient} onChange={(e) => setRecipient(e.target.value)} className="min-h-11 flex-1 rounded-xl border border-slate-300 bg-white px-2">
+        <select aria-label="Filtrer par destinataire" value={recipient} onChange={(e) => setRecipient(e.target.value)} className="min-h-11 w-0 min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-2 text-sm">
           <option value="">Tous les destinataires</option>
           {recipients.map((r) => (
             <option key={r}>{r}</option>
           ))}
         </select>
-        <select aria-label="Filtrer par occasion" value={occasion} onChange={(e) => setOccasion(e.target.value)} className="min-h-11 flex-1 rounded-xl border border-slate-300 bg-white px-2">
+        <select aria-label="Filtrer par occasion" value={occasion} onChange={(e) => setOccasion(e.target.value)} className="min-h-11 w-0 min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-2 text-sm">
           <option value="">Toutes les occasions</option>
           {occasions.map((o) => (
             <option key={o}>{o}</option>

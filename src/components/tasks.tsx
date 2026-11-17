@@ -6,7 +6,7 @@ import { useReady } from "@/lib/store";
 import { addDays, relativeDay } from "@/lib/dates";
 import type { Task } from "@/lib/types";
 import { AppointmentForm, idToWho, useWhoOptions, whoToId, type WhoChoice } from "./forms";
-import { Badge, Button, Input, Label, Person, Segmented, Sheet } from "./ui";
+import { Badge, Button, Input, Label, Person, Segmented, Sheet, useOptimistic } from "./ui";
 
 function origin(t: Task, topicTitle?: string) {
   if (t.is_private) return <Badge tone="violet">Pour moi</Badge>;
@@ -20,7 +20,11 @@ export function TaskRow({ task, overdue = false, showDate = false }: { task: Tas
   const [open, setOpen] = useState(false);
   const [pick, setPick] = useState(false);
   const topic = s.topics.find((t) => t.id === task.topic_id);
-  const setDone = (done: boolean) => run(() => supabase().from("tasks").update({ done }).eq("id", task.id));
+  const [done, setLocalDone] = useOptimistic(task.done);
+  const setDone = (d: boolean) => {
+    setLocalDone(d);
+    return run(() => supabase().from("tasks").update({ done: d }).eq("id", task.id));
+  };
   const move = (d: string) => run(() => supabase().from("tasks").update({ due_date: d }).eq("id", task.id));
   return (
     <div className={`rounded-2xl bg-white p-3 shadow-sm ring-1 ${overdue ? "ring-red-200" : "ring-slate-200"}`}>
@@ -28,7 +32,7 @@ export function TaskRow({ task, overdue = false, showDate = false }: { task: Tas
         <input
           type="checkbox"
           aria-label={`Terminer ${task.title}`}
-          checked={task.done}
+          checked={done}
           onChange={(e) => void setDone(e.target.checked)}
           className="mt-1 h-6 w-6 shrink-0 accent-slate-900"
         />

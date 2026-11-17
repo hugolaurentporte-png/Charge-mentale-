@@ -1,5 +1,16 @@
 "use client";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+
+/** Valeur locale immédiate, resynchronisée quand la donnée serveur change. */
+export function useOptimistic<T>(server: T): [T, (v: T) => void] {
+  const [local, setLocal] = useState(server);
+  const [prev, setPrev] = useState(server);
+  if (prev !== server) {
+    setPrev(server);
+    setLocal(server);
+  }
+  return [local, setLocal];
+}
 import { useApp } from "@/lib/store";
 import type { UUID } from "@/lib/types";
 

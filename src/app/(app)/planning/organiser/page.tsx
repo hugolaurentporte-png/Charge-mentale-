@@ -48,7 +48,7 @@ function Organiser() {
 
   const opts = [
     { value: "me" as Who, label: "Moi", color: s.profiles.find((p) => p.id === s.me)?.color },
-    ...(partner ? [{ value: "partner" as Who, label: "Mon partenaire", color: partner.color }] : []),
+    ...(partner ? [{ value: "partner" as Who, label: partner.display_name, color: partner.color }] : []),
     { value: "undecided" as Who, label: "À décider", color: "#ea580c" },
   ];
 
@@ -122,19 +122,14 @@ function Organiser() {
                   {capitalize(dayName(r.day))} {Number(r.day.slice(8))}
                 </div>
                 {r.on ? (
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="time"
-                      aria-label={`Heure ${dayName(r.day)}`}
-                      value={r.time}
-                      disabled={past}
-                      onChange={(e) => update(r.day, { time: e.target.value })}
-                      className="!w-28"
-                    />
-                    <Button kind="ghost" disabled={past} className="!px-2 text-sm" onClick={() => update(r.day, { on: false })}>
-                      Pas de crèche
-                    </Button>
-                  </div>
+                  <Input
+                    type="time"
+                    aria-label={`Heure ${dayName(r.day)}`}
+                    value={r.time}
+                    disabled={past}
+                    onChange={(e) => update(r.day, { time: e.target.value })}
+                    className="!w-36 text-center text-lg font-bold"
+                  />
                 ) : (
                   <Button kind="secondary" disabled={past} className="text-sm" onClick={() => update(r.day, { on: true })}>
                     Ajouter un créneau
@@ -149,6 +144,14 @@ function Organiser() {
                     onChange={(w) => !past && update(r.day, { who: w })}
                     options={opts}
                   />
+                  <button
+                    type="button"
+                    disabled={past}
+                    onClick={() => update(r.day, { on: false })}
+                    className="mt-2 text-sm font-semibold text-slate-500 underline"
+                  >
+                    Pas de crèche ce jour-là
+                  </button>
                 </div>
               )}
               {!r.on && <div className="mt-1 text-sm text-slate-400">Pas de crèche</div>}

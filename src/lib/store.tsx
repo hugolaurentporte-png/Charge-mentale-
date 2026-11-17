@@ -162,7 +162,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
       if (ok) toast(ok);
       await reload();
-      return data;
+      // Une écriture réussie sans contenu renvoyé (RPC « void », insert sans
+      // select) ne doit pas être confondue avec un échec (null).
+      return data === null ? (true as unknown as T) : data;
     },
     [reload, toast],
   );

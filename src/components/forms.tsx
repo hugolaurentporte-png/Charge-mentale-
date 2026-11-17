@@ -182,7 +182,7 @@ export function AppointmentForm({ day, fromTask, onDone }: { day?: string; fromT
         <Input autoFocus={!fromTask} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Pédiatre" />
       </label>
       <div className="flex gap-3">
-        <label className="block flex-1">
+        <label className="block min-w-0 flex-1">
           <Label>Jour</Label>
           <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
         </label>
@@ -287,7 +287,7 @@ export function GiftForm({ listId, item, onDone }: { listId: UUID; item?: ListIt
         <Input autoFocus value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Livre de cuisine" />
       </label>
       <div className="flex gap-3">
-        <label className="block flex-1">
+        <label className="block min-w-0 flex-1">
           <Label>Pour qui ?</Label>
           <Input list="recipients" value={recipient} onChange={(e) => setRecipient(e.target.value)} placeholder="Mamie" />
           <datalist id="recipients">
@@ -296,7 +296,7 @@ export function GiftForm({ listId, item, onDone }: { listId: UUID; item?: ListIt
             ))}
           </datalist>
         </label>
-        <label className="block flex-1">
+        <label className="block min-w-0 flex-1">
           <Label>Occasion</Label>
           <Input list="occasions" value={occasion} onChange={(e) => setOccasion(e.target.value)} placeholder="Noël" />
           <datalist id="occasions">
