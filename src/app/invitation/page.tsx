@@ -23,9 +23,15 @@ function InvitePageInner() {
 
   useEffect(() => {
     const db = supabase();
-    void db.auth.getUser().then(({ data }) => setSignedIn(Boolean(data.user)));
+    void db.auth.getUser().then(async ({ data }) => {
+      setSignedIn(Boolean(data.user));
+      if (!data.user) return;
+      // Déjà dans un espace (lien rouvert après l'avoir accepté) : direction l'accueil.
+      const { data: m } = await db.from("couple_members").select("couple_id").eq("user_id", data.user.id).maybeSingle();
+      if (m) router.replace("/planning");
+    });
     void db.rpc("invite_preview", { p_token: token }).then(({ data }) => setPreview(data ?? null));
-  }, [token]);
+  }, [token, router]);
 
   const accept = async () => {
     const { error } = await supabase().rpc("accept_invite", { p_token: token, p_display_name: name.trim() });
@@ -39,7 +45,12 @@ function InvitePageInner() {
       {preview === undefined && <p className="mt-6 text-slate-500">Chargement…</p>}
       {preview === null && <p className="mt-6 font-semibold text-red-700">Ce lien d’invitation est introuvable.</p>}
       {preview && !preview.valid && (
-        <p className="mt-6 font-semibold text-red-700">Ce lien a déjà été utilisé ou a expiré. Demande un nouveau lien.</p>
+        <p className="mt-6 font-semibold text-red-700">Ce lien a déjà été utilisé ou a expiré.{" "}
+          <Link href="/connexion" className="underline">
+            Déjà inscrit·e ? Se connecter
+          </Link>
+          , sinon demande un nouveau lien.
+        </p>
       )}
       {preview?.valid && (
         <div className="mt-6 space-y-4 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
