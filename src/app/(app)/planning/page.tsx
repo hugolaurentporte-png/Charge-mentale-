@@ -140,12 +140,14 @@ function Week({ onToday }: { onToday: () => void }) {
         </Button>
       </div>
       <div className="mt-3 flex gap-2">
+        {s.couple.pickups_enabled !== false && (
         <Link
           href={`/planning/organiser?semaine=${start}`}
           className="flex min-h-11 flex-1 items-center justify-center rounded-xl bg-slate-900 px-3 text-[15px] font-semibold text-white"
         >
           Organiser les récupérations
         </Link>
+        )}
         {start !== weekStart(today) && (
           <Button
             kind="secondary"

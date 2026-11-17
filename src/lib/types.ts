@@ -8,6 +8,7 @@ export interface Couple {
   pickup_label: string;
   timezone: string;
   default_pickup_time: string; // "17:30:00"
+  pickups_enabled?: boolean;
   usual_days: number[]; // 1 = lundi … 7 = dimanche
   created_by: UUID;
 }

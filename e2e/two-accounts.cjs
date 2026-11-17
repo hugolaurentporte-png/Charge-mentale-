@@ -396,6 +396,24 @@ async function api(user, path, init = {}) {
   await shot(h, "14-semaine-pas-de-creche");
   ok("Semaine : un jour de crèche se retire d’un geste (« Pas de crèche ce jour-là »)");
 
+  // Désactiver la crèche : plus rien n'en apparaît, chez les deux ; réactiver rend tout
+  await h.getByRole("link", { name: "H", exact: true }).click().catch(() => {});
+  await h.goto(`${APP}/reglages`);
+  await h.getByRole("radio", { name: "Désactivées", exact: true }).click();
+  await see(h, "Récupérations crèche désactivées");
+  await tab(h, "Planning");
+  await notSee(h, "Récupération crèche ·");
+  await h.getByRole("radio", { name: "Semaine" }).click();
+  await notSee(h, "Organiser les récupérations");
+  await c.reload();
+  await notSee(c, "Récupération crèche ·");
+  await shot(h, "15-creche-desactivee");
+  await h.goto(`${APP}/reglages`);
+  await h.getByRole("radio", { name: "Activées", exact: true }).click();
+  await tab(h, "Planning");
+  await see(h, "Récupération crèche ·");
+  ok("Récupérations crèche désactivables pour le couple, puis réactivables sans rien perdre");
+
   await browser.close();
   console.log(`\n${steps.length} vérifications passées.`);
 })().catch(async (err) => {

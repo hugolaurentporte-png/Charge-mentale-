@@ -53,13 +53,15 @@ async function fetchSnapshot(me: UUID, coupleId: UUID): Promise<Snapshot> {
   const ids = (members.data ?? []).map((m: { user_id: UUID }) => m.user_id);
   const profiles = await db.from("profiles").select("*").in("id", ids);
   if (profiles.error) throw profiles.error;
+  // Récupérations crèche désactivées : rien n'en apparaît dans l'app.
+  const creche = couple.data?.pickups_enabled !== false;
   return {
     me,
     couple: couple.data,
     profiles: profiles.data ?? [],
-    pickups: pickups.data ?? [],
-    relays: relays.data ?? [],
-    topics: topics.data ?? [],
+    pickups: creche ? (pickups.data ?? []) : [],
+    relays: creche ? (relays.data ?? []) : [],
+    topics: (topics.data ?? []).filter((t: { kind: string }) => creche || t.kind !== "pickup_week"),
     tasks: tasks.data ?? [],
     appointments: appts.data ?? [],
     lists: lists.data ?? [],

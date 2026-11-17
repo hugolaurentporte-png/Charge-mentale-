@@ -73,6 +73,29 @@ export default function ReglagesPage() {
         )}
       </Section>
 
+      <Section title="Récupérations crèche">
+        <div className="space-y-2 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
+          <Segmented
+            name="Récupérations crèche"
+            value={s.couple.pickups_enabled === false ? "off" : "on"}
+            onChange={(v) =>
+              void run(
+                () => supabase().from("couples").update({ pickups_enabled: v === "on" }).eq("id", s.couple.id),
+                v === "on" ? "Récupérations crèche activées" : "Récupérations crèche désactivées",
+              )
+            }
+            options={[
+              { value: "on", label: "Activées" },
+              { value: "off", label: "Désactivées" },
+            ]}
+          />
+          <p className="text-sm text-slate-500">
+            Désactivées : plus aucune carte, suivi ni rappel de crèche, pour vous deux. Rien n’est effacé, tout revient si
+            vous les réactivez.
+          </p>
+        </div>
+      </Section>
+
       <Section title="Profil et enfant">
         <div className="space-y-4 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
           <label className="block">
