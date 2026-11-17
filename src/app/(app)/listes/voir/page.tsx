@@ -1,6 +1,6 @@
 "use client";
-import { use, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useReady } from "@/lib/store";
 import type { GiftStatus, ListItem } from "@/lib/types";
@@ -124,8 +124,16 @@ function Gifts({ listId, items }: { listId: string; items: ListItem[] }) {
   );
 }
 
-export default function ListPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+export default function ListPage() {
+  return (
+    <Suspense>
+      <ListPageInner />
+    </Suspense>
+  );
+}
+
+function ListPageInner() {
+  const id = useSearchParams().get("id") ?? "";
   const { s, run } = useReady();
   const router = useRouter();
   useFab({ mode: "list", listId: id });

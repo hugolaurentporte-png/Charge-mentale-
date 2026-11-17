@@ -78,7 +78,7 @@ async function api(user, path, init = {}) {
   await h.getByRole("link", { name: "Réglages" }).click();
   await h.getByRole("button", { name: "Créer un lien d’invitation" }).click();
   const link = await h.getByLabel("Lien d’invitation").inputValue();
-  assert.match(link, /\/invitation\/[a-f0-9]{64}$/);
+  assert.match(link, /\/invitation\/?\?t=[a-f0-9]{64}$/);
   ok("Hugo crée l’espace et un lien d’invitation à usage unique");
 
   await c.goto(link);
@@ -116,7 +116,7 @@ async function api(user, path, init = {}) {
   await setDay("vendredi", "17:15", "À décider");
   await shot(h, "01-organiser-recuperations");
   await h.getByRole("button", { name: "Enregistrer la semaine" }).click();
-  await h.waitForURL(/\/planning$/);
+  await h.waitForURL(/\/planning\/?$/);
   ok("Hugo prépare 4 jours de crèche depuis un seul écran (heures et responsables différents)");
 
   // Accueil : heure et responsable visibles immédiatement
@@ -326,11 +326,11 @@ async function api(user, path, init = {}) {
   await h.getByRole("button", { name: "Ajouter l’idée" }).click();
   await see(h, "Pour Camille · Anniversaire");
   await shot(h, "10-surprise-privee");
-  const surpriseId = new URL(h.url()).pathname.split("/").pop();
+  const surpriseId = new URL(h.url()).searchParams.get("id");
 
   await tab(c, "Pour moi");
   await notSee(c, "Week-end surprise");
-  await c.goto(`${APP}/listes/${surpriseId}`);
+  await c.goto(`${APP}/listes/voir?id=${surpriseId}`);
   await see(c, "Liste introuvable");
   // Via l'API, avec le jeton de Camille
   const items = await api(CAMILLE, "list_items?select=*", { method: "GET" });

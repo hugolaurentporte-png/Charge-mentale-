@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useApp, useReady } from "@/lib/store";
 import { supabase, errorMessage } from "@/lib/supabase";
 import type { UUID } from "@/lib/types";
+import { BASE } from "@/lib/base";
 import { AppointmentForm, GiftForm, GoalForm, ItemForm, TaskForm, TopicForm } from "./forms";
 import { Avatar, Button, Input, Label, Segmented, Sheet } from "./ui";
 
@@ -70,7 +71,7 @@ function QuickAdd({ ctx, onClose }: { ctx: FabContext; onClose: () => void }) {
             ]}
           />
         </div>
-        {kind === "topic" && <TopicForm onDone={(id) => (onClose(), id && router.push(`/sujets/${id}`))} />}
+        {kind === "topic" && <TopicForm onDone={(id) => (onClose(), id && router.push(`/sujets/voir?id=${id}`))} />}
         {kind === "task" && <TaskForm onDone={onClose} />}
       </>
     );
@@ -153,8 +154,9 @@ function Onboarding() {
     else await reload();
   };
   const join = () => {
-    const token = link.trim().split("/").pop();
-    if (token) window.location.href = `/invitation/${token}`;
+    const raw = link.trim();
+    const token = raw.match(/[?&]t=([^&#]+)/)?.[1] ?? raw.split("/").pop();
+    if (token) window.location.href = `${BASE}/invitation?t=${token}`;
   };
   return (
     <main className="mx-auto max-w-md space-y-6 p-5 pt-12">

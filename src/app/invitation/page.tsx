@@ -1,12 +1,20 @@
 "use client";
-import { use, useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { errorMessage, supabase } from "@/lib/supabase";
 import { Button, Input, Label } from "@/components/ui";
 
-export default function InvitePage({ params }: { params: Promise<{ token: string }> }) {
-  const { token } = use(params);
+export default function InvitePage() {
+  return (
+    <Suspense>
+      <InvitePageInner />
+    </Suspense>
+  );
+}
+
+function InvitePageInner() {
+  const token = useSearchParams().get("t") ?? "";
   const router = useRouter();
   const [preview, setPreview] = useState<{ inviter: string; valid: boolean } | null | undefined>(undefined);
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
@@ -40,7 +48,7 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
           </p>
           {signedIn === false && (
             <Link
-              href={`/connexion?suite=${encodeURIComponent(`/invitation/${token}`)}`}
+              href={`/connexion?suite=${encodeURIComponent(`/invitation?t=${token}`)}`}
               className="block rounded-xl bg-slate-900 py-3 text-center font-semibold text-white"
             >
               Créer mon compte ou me connecter

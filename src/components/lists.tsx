@@ -33,7 +33,7 @@ export function ListLink({ list }: { list: List }) {
   const items = s.items.filter((i) => i.list_id === list.id);
   const left = list.kind === "gifts" ? items.filter((i) => i.gift_status !== "bought").length : items.filter((i) => !i.checked).length;
   return (
-    <Link href={`/listes/${list.id}`} className="flex items-center gap-2 rounded-2xl bg-white p-3 pl-4 shadow-sm ring-1 ring-slate-200">
+    <Link href={`/listes/voir?id=${list.id}`} className="flex items-center gap-2 rounded-2xl bg-white p-3 pl-4 shadow-sm ring-1 ring-slate-200">
       <div className="min-w-0 flex-1">
         <div className="text-[16px] font-bold">{list.name}</div>
         <div className="text-sm text-slate-500">

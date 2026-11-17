@@ -1,6 +1,10 @@
-import { redirect } from "next/navigation";
+"use client";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 // Chaque ouverture de l'application affiche « Aujourd'hui ».
 export default function Home() {
-  redirect("/planning");
+  const router = useRouter();
+  useEffect(() => router.replace("/planning"), [router]);
+  return null;
 }

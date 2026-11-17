@@ -134,7 +134,7 @@ export function TaskSheet({ task, onClose }: { task: Task; onClose: () => void }
           </div>
         </label>
         {topic && (
-          <Link href={`/sujets/${topic.id}`} className="block text-sm font-semibold text-slate-600 underline">
+          <Link href={`/sujets/voir?id=${topic.id}`} className="block text-sm font-semibold text-slate-600 underline">
             Sujet : {topic.title}
           </Link>
         )}

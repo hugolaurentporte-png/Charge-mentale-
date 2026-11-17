@@ -105,7 +105,7 @@ function Today() {
               return (
                 <Link
                   key={l.id}
-                  href={`/listes/${l.id}`}
+                  href={`/listes/voir?id=${l.id}`}
                   className="rounded-2xl bg-white px-4 py-3 font-semibold shadow-sm ring-1 ring-slate-200"
                 >
                   {l.name} <span className="text-slate-400">· {left}</span>

@@ -1,13 +1,14 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { SwRegister } from "./sw-register";
+import { BASE } from "@/lib/base";
 
 export const metadata: Metadata = {
   title: "À deux",
   description: "Organiser le quotidien à deux et répartir la charge mentale.",
-  manifest: "/manifest.webmanifest",
+  manifest: `${BASE}/manifest.webmanifest`,
   appleWebApp: { capable: true, title: "À deux", statusBarStyle: "default" },
-  icons: { icon: "/icons/icon-192.png", apple: "/icons/apple-touch-icon.png" },
+  icons: { icon: `${BASE}/icons/icon-192.png`, apple: `${BASE}/icons/apple-touch-icon.png` },
 };
 
 export const viewport: Viewport = {

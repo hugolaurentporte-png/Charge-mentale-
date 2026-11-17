@@ -1,7 +1,7 @@
 "use client";
-import { use, useState } from "react";
+import { useState, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useReady } from "@/lib/store";
 import { addDays, nextWeekday, relativeDay, weekDays } from "@/lib/dates";
@@ -134,8 +134,16 @@ function WeekPickups({ t }: { t: Topic }) {
   );
 }
 
-export default function TopicPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+export default function TopicPage() {
+  return (
+    <Suspense>
+      <TopicPageInner />
+    </Suspense>
+  );
+}
+
+function TopicPageInner() {
+  const id = useSearchParams().get("id") ?? "";
   const { s, who, partner, run } = useReady();
   const router = useRouter();
   const a = useTopicActions();

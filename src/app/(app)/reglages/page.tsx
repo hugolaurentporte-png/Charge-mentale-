@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useReady } from "@/lib/store";
+import { BASE } from "@/lib/base";
 import { Button, Input, Label, Section, Segmented } from "@/components/ui";
 
 export default function ReglagesPage() {
@@ -28,7 +29,7 @@ export default function ReglagesPage() {
   };
   const invite = async () => {
     const token = (await run(() => supabase().rpc("create_invite"))) as string | null;
-    if (token) setLink(`${window.location.origin}/invitation/${token}`);
+    if (token) setLink(`${window.location.origin}${BASE}/invitation?t=${token}`);
   };
   const share = async () => {
     if (!link) return;

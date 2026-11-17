@@ -70,3 +70,7 @@ npm run e2e        # captures dans e2e/captures
 - Les récupérations et relais ne s’écrivent que via des fonctions serveur (`claim_pickup`, `request_relay`, `respond_relay`, `cancel_relay`, `save_pickups`) ; une contrainte unique garantit une seule récupération par jour.
 - Le responsable d’un sujet ne change que via `claim_topic` / `propose_topic` / `respond_topic` ; seul le responsable fixe la prochaine étape.
 - L’invitation (`create_invite`, `accept_invite`) limite l’espace à deux membres.
+
+## Mise en ligne
+
+Chaque push sur `main` publie l'app sur GitHub Pages (`.github/workflows/pages.yml`) : export statique (`STATIC_EXPORT=1`), servi sous `/<nom du dépôt>`. Les pages à identifiant passent par un paramètre (`/listes/voir?id=…`, `/sujets/voir?id=…`, `/invitation?t=…`). Ajouter l'adresse publiée dans Supabase > Authentication > URL Configuration.

@@ -47,7 +47,7 @@ export function TopicCard({ t }: { t: Topic }) {
       className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200"
       style={{ borderLeft: `6px solid ${s.profiles.find((p) => p.id === t.owner_id)?.color ?? ORANGE}` }}
     >
-      <Link href={`/sujets/${t.id}`} className="block">
+      <Link href={`/sujets/voir?id=${t.id}`} className="block">
         <div className="flex items-center gap-3">
           <Avatar id={t.owner_id} size={32} />
           <div className="min-w-0 flex-1">
@@ -96,7 +96,7 @@ export function FollowUpRow({ f }: { f: FollowUp }) {
   }
   return (
     <Link
-      href={`/sujets/${f.topic.id}`}
+      href={`/sujets/voir?id=${f.topic.id}`}
       className={`block rounded-2xl bg-white p-4 shadow-sm ring-1 ${f.overdue ? "ring-red-300" : "ring-slate-200"}`}
     >
       <div className="text-sm font-semibold text-slate-500">{topicTitle(f.topic)}</div>
