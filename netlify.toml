@@ -1,0 +1,9 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+# Valeurs publiques côté client (clé publishable Supabase, protégée par la RLS).
+[build.environment]
+  NODE_VERSION = "22"
+  NEXT_PUBLIC_SUPABASE_URL = "https://hevradrkdhfntxqcyrbz.supabase.co"
+  NEXT_PUBLIC_SUPABASE_ANON_KEY = "sb_publishable_wwRO_2PBjKoIplL0Ez5CGg_GPogP10p"
