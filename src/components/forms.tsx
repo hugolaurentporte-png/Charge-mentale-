@@ -122,7 +122,16 @@ export function TaskForm({
 }) {
   const { s, partner, run, today } = useReady();
   const [title, setTitle] = useState("");
+  const [priv, setPriv] = useState(isPrivate);
+  const [linked, setLinked] = useState<UUID | null>(topicId ?? null);
   const [who, setWho] = useState<WhoChoice>(isPrivate ? "me" : "none");
+  // Sujets à deux en cours, proposés pour rattacher la tâche (ceux qui me concernent d'abord).
+  const suggestions = topicId
+    ? []
+    : s.topics
+        .filter((t) => t.status === "open" && t.kind === "general")
+        .sort((a, b) => Number(b.owner_id === s.me) - Number(a.owner_id === s.me))
+        .slice(0, 6);
   const [date, setDate] = useState(day ?? "");
   const [time, setTime] = useState("");
   const [repeat, setRepeat] = useState<RecurrenceChoice>("");
@@ -146,9 +155,9 @@ export function TaskForm({
         due_time: date && time ? time : null,
         recurrence: date && repeat ? repeat : null,
         note: note.trim() || null,
-        is_private: isPrivate,
-        assignee_id: isPrivate ? s.me : whoToId(who, s.me, partner?.id),
-        topic_id: topicId ?? null,
+        is_private: priv,
+        assignee_id: priv ? s.me : whoToId(who, s.me, partner?.id),
+        topic_id: priv ? null : linked,
       }),
     );
     if (ok !== null) onDone();
@@ -162,7 +171,46 @@ export function TaskForm({
           <VoiceButton onText={fromVoice} />
         </div>
       </label>
-      {!isPrivate && (
+      {!isPrivate && !topicId && (
+        <div>
+          <Label>Visible par</Label>
+          <Segmented
+            name="Visible par"
+            value={priv ? "me" : "both"}
+            onChange={(v) => setPriv(v === "me")}
+            options={[
+              { value: "both", label: "Nous deux" },
+              { value: "me", label: "Juste moi" },
+            ]}
+          />
+          {priv && <p className="mt-1 text-sm text-slate-500">Rangée dans « Pour moi », invisible pour l’autre.</p>}
+        </div>
+      )}
+      {!priv && suggestions.length > 0 && (
+        <div>
+          <Label>Lier à un sujet à deux (facultatif)</Label>
+          <div className="flex flex-wrap gap-2">
+            {suggestions.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                aria-pressed={linked === t.id}
+                onClick={() => {
+                  const on = linked !== t.id;
+                  setLinked(on ? t.id : null);
+                  if (on && !title.trim()) setTitle(t.next_action || t.title);
+                }}
+                className={`min-h-9 rounded-full px-3 text-sm font-semibold ${
+                  linked === t.id ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-700"
+                }`}
+              >
+                {t.title}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      {!priv && (
         <div>
           <Label>Qui s’en charge ?</Label>
           <Segmented name="Responsable" value={who} onChange={setWho} options={opts} />

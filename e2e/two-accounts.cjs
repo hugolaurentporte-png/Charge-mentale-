@@ -414,6 +414,29 @@ async function api(user, path, init = {}) {
   await see(h, "Récupération crèche ·");
   ok("Récupérations crèche désactivables pour le couple, puis réactivables sans rien perdre");
 
+  // Depuis le planning : un sujet à deux est proposé ; et une tâche « Juste moi » reste privée
+  await fab(c);
+  await c.getByRole("radio", { name: "Sujet" }).click();
+  await c.getByLabel("Sujet", { exact: true }).fill("Vacances de février");
+  await c.getByRole("button", { name: "Créer le sujet" }).click();
+  await tab(h, "Planning");
+  await h.getByRole("radio", { name: "Aujourd’hui" }).click();
+  await fab(h);
+  await h.getByRole("button", { name: "Vacances de février" }).click();
+  await h.getByLabel("Titre", { exact: true }).fill("Réserver le gîte");
+  await h.getByRole("button", { name: "Ajouter", exact: true }).last().click();
+  await see(h, "Réserver le gîte");
+  await fab(h);
+  await h.getByRole("radio", { name: "Juste moi" }).click();
+  await h.getByLabel("Titre", { exact: true }).fill("Cadeau secret");
+  await h.getByRole("button", { name: "Ajouter", exact: true }).last().click();
+  await see(h, "Cadeau secret");
+  await shot(h, "16-juste-moi-et-sujet");
+  await c.reload();
+  await see(c, "Réserver le gîte").catch(() => {});
+  await notSee(c, "Cadeau secret");
+  ok("Ajout depuis le planning : sujets à deux proposés, et « Juste moi » reste invisible pour l’autre");
+
   await browser.close();
   console.log(`\n${steps.length} vérifications passées.`);
 })().catch(async (err) => {
