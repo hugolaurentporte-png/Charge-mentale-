@@ -107,7 +107,6 @@ async function api(user, path, init = {}) {
   await h.getByRole("link", { name: "Organiser les récupérations" }).click();
   await see(h, "Je prends en charge l’organisation");
   const setDay = async (day, time, who) => {
-    await h.getByRole("button", { name: `Ajouter ${day}` }).click();
     await h.getByLabel(`Heure ${day}`).fill(time);
     await h.getByRole("radiogroup", { name: `Qui ${day}` }).getByRole("radio", { name: who }).click();
   };

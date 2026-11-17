@@ -39,8 +39,8 @@ function Organiser() {
             time: shortTime(p.time),
             who: (p.responsible_id === null ? "undecided" : p.responsible_id === s.me ? "me" : "partner") as Who,
           }
-        : // Rien n'est coché d'office : seuls les jours choisis deviennent des récupérations.
-          { on: false, time: shortTime(s.couple.default_pickup_time), who: "undecided" as Who };
+        : // Rien n'est coché d'office : saisir une heure ajoute le jour.
+          { on: false, time: "", who: "undecided" as Who };
       return { day, existing: Boolean(p), initial: { ...init }, ...init };
     }),
   );
@@ -140,7 +140,11 @@ function Organiser() {
         <p className="mt-1 text-sm text-slate-500">Les jours restés « À décider » remontent dans les suivis de l’organisateur.</p>
       </div>
 
-      <div className="mt-4 space-y-3">
+      <Button kind="secondary" className="mt-4 w-full" onClick={applyHabits}>
+        Remplir les jours habituels à {defTime.replace(":", " h ")}
+      </Button>
+
+      <div className="mt-3 space-y-3">
         {rows.map((r) => {
           const past = r.day < today;
           return (
@@ -149,20 +153,14 @@ function Organiser() {
                 <div className="font-bold">
                   {capitalize(dayName(r.day))} {Number(r.day.slice(8))}
                 </div>
-                {r.on ? (
-                  <Input
-                    type="time"
-                    aria-label={`Heure ${dayName(r.day)}`}
-                    value={r.time}
-                    disabled={past}
-                    onChange={(e) => update(r.day, { time: e.target.value })}
-                    className="!w-36 text-center text-lg font-bold"
-                  />
-                ) : (
-                  <Button kind="secondary" disabled={past} className="text-sm" aria-label={`Ajouter ${dayName(r.day)}`} onClick={() => update(r.day, { on: true })}>
-                    Ajouter un créneau
-                  </Button>
-                )}
+                <Input
+                  type="time"
+                  aria-label={`Heure ${dayName(r.day)}`}
+                  value={r.on ? r.time : ""}
+                  disabled={past}
+                  onChange={(e) => update(r.day, e.target.value ? { time: e.target.value, on: true } : { time: "", on: false })}
+                  className={`!w-36 text-center text-lg font-bold ${r.on ? "" : "!border-dashed text-slate-400"}`}
+                />
               </div>
               {r.on && (
                 <div className="mt-3">
@@ -175,14 +173,14 @@ function Organiser() {
                   <button
                     type="button"
                     disabled={past}
-                    onClick={() => update(r.day, { on: false })}
+                    onClick={() => update(r.day, { on: false, time: "" })}
                     className="mt-2 text-sm font-semibold text-slate-500 underline"
                   >
                     Pas de crèche ce jour-là
                   </button>
                 </div>
               )}
-              {!r.on && <div className="mt-1 text-sm text-slate-400">Pas de crèche</div>}
+              {!r.on && <div className="mt-1 text-sm text-slate-400">Pas de crèche · choisis une heure pour l’ajouter</div>}
             </div>
           );
         })}
@@ -221,10 +219,10 @@ function Organiser() {
         <Button className="w-full shadow-lg" disabled={saving} onClick={() => void save()}>
           Enregistrer la semaine
         </Button>
-        <Button kind="ghost" className="mt-2 w-full" disabled={saving} onClick={() => void clearWeek()}>
-          Supprimer la crèche de cette semaine
-        </Button>
       </div>
+      <Button kind="ghost" className="mt-2 w-full" disabled={saving} onClick={() => void clearWeek()}>
+        Supprimer la crèche de cette semaine
+      </Button>
     </div>
   );
 }
