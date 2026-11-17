@@ -73,4 +73,4 @@ npm run e2e        # captures dans e2e/captures
 
 ## Mise en ligne
 
-Chaque push sur `main` publie l'app sur GitHub Pages (`.github/workflows/pages.yml`) : export statique (`STATIC_EXPORT=1`), servi sous `/<nom du dépôt>`. Les pages à identifiant passent par un paramètre (`/listes/voir?id=…`, `/sujets/voir?id=…`, `/invitation?t=…`). Ajouter l'adresse publiée dans Supabase > Authentication > URL Configuration.
+Chaque push sur `main` publie l’app sur GitHub Pages, via la branche `gh-pages` (`.github/workflows/pages.yml`). Adresse : https://hugolaurentporte-png.github.io/Charge-mentale-/. Le site est un export statique (`STATIC_EXPORT=1`), servi sous `/<nom du dépôt>`. Les pages à identifiant passent par un paramètre (`/listes/voir?id=…`, `/sujets/voir?id=…`, `/invitation?t=…`). Ajouter l'adresse publiée dans Supabase > Authentication > URL Configuration.

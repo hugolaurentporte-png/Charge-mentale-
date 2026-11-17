@@ -6,9 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
   group: pages
@@ -31,17 +29,11 @@ jobs:
           # Valeurs publiques côté client (clé publishable, données protégées par la RLS).
           NEXT_PUBLIC_SUPABASE_URL: https://hevradrkdhfntxqcyrbz.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_wwRO_2PBjKoIplL0Ez5CGg_GPogP10p
-      - run: touch out/.nojekyll
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: out
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Pousser out/ sur la branche gh-pages (servie par GitHub Pages)
+        run: |
+          touch out/.nojekyll
+          cd out
+          git init -q -b gh-pages
+          git add -A
+          git -c user.name="github-actions" -c user.email="github-actions@users.noreply.github.com" commit -qm "Publication ${GITHUB_SHA::7}"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" gh-pages
