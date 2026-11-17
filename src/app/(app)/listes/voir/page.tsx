@@ -10,7 +10,7 @@ import { FavStar } from "@/components/lists";
 import { Badge, Button, Empty, Sheet, useOptimistic } from "@/components/ui";
 
 function ItemRow({ item }: { item: ListItem }) {
-  const { run } = useReady();
+  const { run, deferDelete } = useReady();
   const [checked, setChecked] = useOptimistic(item.checked);
   return (
     <div className="flex items-center gap-3 rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200">
@@ -30,7 +30,7 @@ function ItemRow({ item }: { item: ListItem }) {
       </div>
       <button
         aria-label={`Supprimer ${item.label}`}
-        onClick={() => void run(() => supabase().from("list_items").delete().eq("id", item.id))}
+        onClick={() => deferDelete(item.id, `« ${item.label} » supprimé`, () => supabase().from("list_items").delete().eq("id", item.id))}
         className="h-9 w-9 rounded-full text-xl text-slate-400"
       >
         ×
@@ -83,7 +83,7 @@ function Gifts({ listId, items }: { listId: string; items: ListItem[] }) {
   const [recipient, setRecipient] = useState("");
   const [occasion, setOccasion] = useState("");
   const [editing, setEditing] = useState<ListItem | null>(null);
-  const { run } = useReady();
+  const { deferDelete } = useReady();
   const recipients = Array.from(new Set(items.map((i) => i.recipient).filter(Boolean))) as string[];
   const occasions = Array.from(new Set(items.map((i) => i.occasion).filter(Boolean))) as string[];
   const shown = items
@@ -114,7 +114,11 @@ function Gifts({ listId, items }: { listId: string; items: ListItem[] }) {
           <Button
             kind="danger"
             className="mt-3 w-full"
-            onClick={() => void run(() => supabase().from("list_items").delete().eq("id", editing.id)).then(() => setEditing(null))}
+            onClick={() => {
+              const it = editing;
+              setEditing(null);
+              deferDelete(it.id, `« ${it.label} » supprimée`, () => supabase().from("list_items").delete().eq("id", it.id));
+            }}
           >
             Supprimer
           </Button>

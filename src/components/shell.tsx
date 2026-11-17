@@ -100,7 +100,7 @@ function QuickAdd({ ctx, onClose }: { ctx: FabContext; onClose: () => void }) {
     );
   } else if (ctx.mode === "topic") {
     title = "Nouvelle action du sujet";
-    body = <TaskForm topicId={ctx.topicId} onDone={onClose} />;
+    body = <TaskForm topicId={ctx.topicId} isPrivate={Boolean(s.topics.find((t) => t.id === ctx.topicId)?.is_private)} onDone={onClose} />;
   }
   return (
     <Sheet open onClose={onClose} title={title}>
@@ -202,7 +202,7 @@ export function Header({ title, right }: { title: string; right?: React.ReactNod
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const { status, error, toastMsg, s } = useApp();
+  const { status, error, toastMsg, toastUndo, s } = useApp();
   const router = useRouter();
   const path = usePathname();
   const [ctx, setCtx] = useState<FabContext | null>(null);
@@ -242,8 +242,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {adding && ctx && <QuickAdd ctx={ctx} onClose={() => setAdding(false)} />}
       <TabBar />
       {toastMsg && (
-        <div role="status" className="fixed inset-x-4 top-4 z-[60] mx-auto max-w-sm rounded-2xl bg-slate-900 px-4 py-3 text-center text-sm font-semibold text-white shadow-lg">
-          {toastMsg}
+        <div role="status" className="fixed inset-x-4 top-4 z-[60] mx-auto flex max-w-sm items-center justify-center gap-3 rounded-2xl bg-slate-900 px-4 py-3 text-center text-sm font-semibold text-white shadow-lg">
+          <span>{toastMsg}</span>
+          {toastUndo && (
+            <button onClick={toastUndo} className="rounded-lg bg-white/15 px-3 py-1 font-bold text-amber-300">
+              Annuler
+            </button>
+          )}
         </div>
       )}
     </FabCtx.Provider>

@@ -7,6 +7,7 @@ import { BASE } from "@/lib/base";
 import { Button, Input, Label, Section, Segmented } from "@/components/ui";
 import { PushSettings } from "@/components/push";
 import { AgendaSettings } from "@/components/agenda";
+import { AppearanceSettings } from "@/components/appearance";
 
 export default function ReglagesPage() {
   const { s, run, partner, toast } = useReady();
@@ -130,6 +131,27 @@ export default function ReglagesPage() {
 
       <Section title="Notifications">
         <PushSettings />
+        <label className="flex items-center gap-3 rounded-2xl bg-white p-4 text-[15px] shadow-sm ring-1 ring-slate-200">
+          <input
+            type="checkbox"
+            className="h-5 w-5"
+            checked={me?.evening_summary !== false}
+            onChange={(e) =>
+              void run(
+                () => supabase().from("profiles").update({ evening_summary: e.target.checked }).eq("id", s.me),
+                e.target.checked ? "Résumé du soir activé" : "Résumé du soir désactivé",
+              )
+            }
+          />
+          <span>
+            Résumé du soir vers 20 h
+            <span className="block text-sm text-slate-500">Ce qui t’attend demain : crèche, rendez-vous, tâches.</span>
+          </span>
+        </label>
+      </Section>
+
+      <Section title="Apparence">
+        <AppearanceSettings />
       </Section>
 
       <Section title="Agenda">

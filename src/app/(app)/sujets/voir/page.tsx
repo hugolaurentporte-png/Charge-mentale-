@@ -152,7 +152,7 @@ function TopicPageInner() {
   if (!t) return <Empty>Sujet introuvable.</Empty>;
   const tasks = s.tasks.filter((x) => x.topic_id === t.id);
   const open = t.status === "open";
-  const canPropose = open && partner && (t.owner_id === null || t.owner_id === s.me) && !t.proposed_to;
+  const canPropose = open && partner && !t.is_private && (t.owner_id === null || t.owner_id === s.me) && !t.proposed_to;
   return (
     <div className="pt-4">
       <button onClick={() => router.push("/listes")} className="text-sm font-semibold text-slate-500">
@@ -210,6 +210,11 @@ function TopicPageInner() {
           {canPropose && (
             <Button kind="secondary" className="flex-1" onClick={() => void a.propose(t)}>
               Proposer à {partner.display_name}
+            </Button>
+          )}
+          {t.owner_id === s.me && !t.is_private && (
+            <Button kind="ghost" className="flex-1" onClick={() => void a.release(t)}>
+              Je ne m’en occupe plus
             </Button>
           )}
         </div>

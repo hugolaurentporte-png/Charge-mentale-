@@ -15,8 +15,12 @@ interface Ctx {
   reload: () => Promise<void>;
   /** Exécute une écriture, affiche l'erreur éventuelle, puis resynchronise. */
   run: <T>(fn: () => PromiseLike<{ data: T; error: unknown }>, ok?: string) => Promise<T | null>;
-  toast: (msg: string) => void;
+  /** Message bref ; avec `undo`, un bouton « Annuler » pendant quelques secondes. */
+  toast: (msg: string, undo?: () => void) => void;
   toastMsg: string | null;
+  toastUndo: (() => void) | null;
+  /** Suppression différée de 5 s, annulable : l'élément disparaît tout de suite. */
+  deferDelete: (id: UUID, msg: string, doDelete: () => PromiseLike<{ error: unknown }>) => void;
   partner: Profile | null;
   profile: (id: UUID | null | undefined) => Profile | undefined;
   /** « Toi » pour le compte connecté, sinon le prénom. */
@@ -27,13 +31,13 @@ const AppCtx = createContext<Ctx | null>(null);
 
 const TABLES = [
   "couples", "profiles", "couple_members", "topics", "pickups", "relay_requests",
-  "tasks", "appointments", "lists", "list_items",
+  "tasks", "appointments", "lists", "list_items", "task_reactions",
 ] as const;
 
 async function fetchSnapshot(me: UUID, coupleId: UUID): Promise<Snapshot> {
   const db = supabase();
   const since = new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10);
-  const [couple, members, pickups, relays, topics, tasks, appts, lists, items, favs, goals] =
+  const [couple, members, pickups, relays, topics, tasks, appts, lists, items, favs, goals, reactions] =
     await Promise.all([
       db.from("couples").select("*").eq("id", coupleId).single(),
       db.from("couple_members").select("user_id").eq("couple_id", coupleId),
@@ -46,6 +50,7 @@ async function fetchSnapshot(me: UUID, coupleId: UUID): Promise<Snapshot> {
       db.from("list_items").select("*").order("created_at"),
       db.from("list_favorites").select("list_id"),
       db.from("goals").select("*").order("created_at"),
+      db.from("task_reactions").select("*").order("created_at"),
     ]);
   const firstError = [couple, members, pickups, relays, topics, tasks, appts, lists, items, favs, goals]
     .find((r) => r.error)?.error;
@@ -68,6 +73,8 @@ async function fetchSnapshot(me: UUID, coupleId: UUID): Promise<Snapshot> {
     items: items.data ?? [],
     favorites: (favs.data ?? []).map((f: { list_id: UUID }) => f.list_id),
     goals: goals.data ?? [],
+    // Table ajoutée après la V1 : son absence ne bloque pas l'app.
+    reactions: reactions.error ? [] : (reactions.data ?? []),
   };
 }
 
@@ -75,15 +82,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<Status>("loading");
   const [error, setError] = useState<string | null>(null);
   const [s, setS] = useState<Snapshot | null>(null);
-  const [toastMsg, setToast] = useState<string | null>(null);
+  const [toastState, setToastState] = useState<{ msg: string; undo: (() => void) | null } | null>(null);
+  const [hidden, setHidden] = useState<Set<UUID>>(() => new Set());
   const [today, setToday] = useState(() => todayIn());
   const coupleRef = useRef<UUID | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const toast = useCallback((msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast((m) => (m === msg ? null : m)), 3500);
+  const toast = useCallback((msg: string, undo?: () => void) => {
+    const entry: { msg: string; undo: (() => void) | null } = { msg, undo: null };
+    if (undo)
+      entry.undo = () => {
+        undo();
+        setToastState((m) => (m === entry ? null : m));
+      };
+    setToastState(entry);
+    setTimeout(() => setToastState((m) => (m === entry ? null : m)), undo ? 5000 : 3500);
   }, []);
 
   const reload = useCallback(async () => {
@@ -171,15 +185,51 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     [reload, toast],
   );
 
+  const deferDelete = useCallback(
+    (id: UUID, msg: string, doDelete: () => PromiseLike<{ error: unknown }>) => {
+      setHidden((h) => new Set(h).add(id));
+      let cancelled = false;
+      const restore = () => {
+        cancelled = true;
+        setHidden((h) => {
+          const n = new Set(h);
+          n.delete(id);
+          return n;
+        });
+      };
+      toast(msg, restore);
+      setTimeout(async () => {
+        if (cancelled) return;
+        const { error: err } = await doDelete();
+        if (err) toast(errorMessage(err));
+        await reload();
+        restore();
+      }, 5000);
+    },
+    [reload, toast],
+  );
+
+  // Les éléments en cours de suppression (annulable) sont déjà masqués.
+  const visible = useMemo(
+    () =>
+      s && hidden.size
+        ? { ...s, tasks: s.tasks.filter((t) => !hidden.has(t.id)), items: s.items.filter((i) => !hidden.has(i.id)) }
+        : s,
+    [s, hidden],
+  );
+
+  const toastMsg = toastState?.msg ?? null;
+  const toastUndo = toastState?.undo ?? null;
   const value = useMemo<Ctx>(() => {
+    const s = visible;
     const profile = (id: UUID | null | undefined) => s?.profiles.find((p) => p.id === id);
     return {
-      status, error, s, today, reload, run, toast, toastMsg,
+      status, error, s, today, reload, run, toast, toastMsg, toastUndo, deferDelete,
       partner: s?.profiles.find((p) => p.id !== s.me) ?? null,
       profile,
       who: (id) => (id && id === s?.me ? "Toi" : profile(id)?.display_name ?? "?"),
     };
-  }, [status, error, s, today, reload, run, toast, toastMsg]);
+  }, [status, error, visible, today, reload, run, toast, toastMsg, toastUndo, deferDelete]);
 
   return <AppCtx.Provider value={value}>{children}</AppCtx.Provider>;
 }

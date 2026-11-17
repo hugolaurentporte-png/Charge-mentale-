@@ -14,6 +14,7 @@ export interface Couple {
 }
 
 export interface Profile {
+  evening_summary?: boolean;
   id: UUID;
   display_name: string;
   color: string;
@@ -52,6 +53,7 @@ export interface Topic {
   closed_at: string | null;
   created_by: UUID;
   created_at: string;
+  is_private?: boolean;
 }
 
 export interface Task {
@@ -130,4 +132,12 @@ export interface Snapshot {
   items: ListItem[];
   favorites: UUID[];
   goals: Goal[];
+  reactions: TaskReaction[];
+}
+
+export interface TaskReaction {
+  task_id: UUID;
+  user_id: UUID;
+  emoji: string;
+  created_at: string;
 }

@@ -17,7 +17,7 @@ function snap(me: string, extra: Partial<Snapshot> = {}): Snapshot {
       default_pickup_time: "17:30:00", usual_days: [1, 2, 3, 4, 5], created_by: HUGO,
     },
     profiles: [], pickups: [], relays: [], topics: [], tasks: [], appointments: [],
-    lists: [], items: [], favorites: [], goals: [],
+    lists: [], items: [], favorites: [], goals: [], reactions: [],
     ...extra,
   };
 }

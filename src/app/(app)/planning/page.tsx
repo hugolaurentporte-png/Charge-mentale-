@@ -192,7 +192,7 @@ function Week({ onToday }: { onToday: () => void }) {
                     setEditing(p);
                   }}
                   className="mt-2 flex cursor-pointer items-center gap-2 rounded-xl px-2 py-2"
-                  style={{ background: p.responsible_id ? "#f8fafc" : "#fff7ed", borderLeft: `4px solid ${s.profiles.find((x) => x.id === p.responsible_id)?.color ?? ORANGE}` }}
+                  style={{ background: p.responsible_id ? "var(--color-slate-50)" : "var(--color-orange-50)", borderLeft: `4px solid ${s.profiles.find((x) => x.id === p.responsible_id)?.color ?? ORANGE}` }}
                 >
                   <span className="w-16 shrink-0 whitespace-nowrap font-extrabold">{formatTime(p.time)}</span>
                   <span className="min-w-0 flex-1 text-sm">

@@ -8,6 +8,9 @@ import type { Topic } from "@/lib/types";
 import { Avatar, Badge, Button, ORANGE } from "./ui";
 import { PickupCard, usePickupActions } from "./pickup";
 
+/** Couleur des sujets « juste moi ». */
+export const PRIVATE_COLOR = "#7c3aed";
+
 export function topicTitle(t: Topic) {
   return t.kind === "pickup_week" && t.week_start ? `${t.title} · semaine du ${weekLabel(t.week_start)}` : t.title;
 }
@@ -22,6 +25,7 @@ export function useTopicActions() {
     propose: (t: Topic) => run(() => supabase().rpc("propose_topic", { p_topic: t.id }), "Proposition envoyée"),
     respond: (t: Topic, accept: boolean) =>
       run(() => supabase().rpc("respond_topic", { p_topic: t.id, p_accept: accept }), accept ? "Tu t’en occupes" : "Proposition refusée"),
+    release: (t: Topic) => run(() => supabase().rpc("release_topic", { p_topic: t.id }), "Tu ne suis plus ce sujet"),
     cancel: (t: Topic) => run(() => supabase().rpc("cancel_topic_proposal", { p_topic: t.id }), "Proposition annulée"),
     close: (t: Topic, closed: boolean) =>
       run(() => supabase().from("topics").update({ status: closed ? "closed" : "open" }).eq("id", t.id), closed ? "Sujet clôturé" : "Sujet rouvert"),
@@ -32,6 +36,7 @@ export function TopicStateBadge({ t }: { t: Topic }) {
   const { who } = useReady();
   const st = topicState(t);
   if (st === "closed") return <Badge tone="green">Réglé</Badge>;
+  if (t.is_private) return <Badge tone="violet">Juste moi</Badge>;
   if (st === "open_unowned") return <Badge tone="orange">À prendre en charge</Badge>;
   return <Badge>Suivi par {who(t.owner_id)}</Badge>;
 }
@@ -44,8 +49,8 @@ export function TopicCard({ t }: { t: Topic }) {
   const unowned = !t.owner_id && t.status === "open";
   return (
     <div
-      className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200"
-      style={{ borderLeft: `6px solid ${s.profiles.find((p) => p.id === t.owner_id)?.color ?? ORANGE}` }}
+      className={`rounded-2xl p-4 shadow-sm ring-1 ${t.is_private ? "bg-violet-50 ring-violet-200" : "bg-white ring-slate-200"}`}
+      style={{ borderLeft: `6px solid ${t.is_private ? PRIVATE_COLOR : (s.profiles.find((p) => p.id === t.owner_id)?.color ?? ORANGE)}` }}
     >
       <Link href={`/sujets/voir?id=${t.id}`} className="block">
         <div className="flex items-center gap-3">

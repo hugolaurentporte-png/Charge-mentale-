@@ -129,7 +129,7 @@ export function TaskForm({
   const suggestions = topicId
     ? []
     : s.topics
-        .filter((t) => t.status === "open" && t.kind === "general")
+        .filter((t) => t.status === "open" && t.kind === "general" && Boolean(t.is_private) === priv)
         .sort((a, b) => Number(b.owner_id === s.me) - Number(a.owner_id === s.me))
         .slice(0, 6);
   const [date, setDate] = useState(day ?? "");
@@ -157,7 +157,7 @@ export function TaskForm({
         note: note.trim() || null,
         is_private: priv,
         assignee_id: priv ? s.me : whoToId(who, s.me, partner?.id),
-        topic_id: priv ? null : linked,
+        topic_id: linked && Boolean(s.topics.find((t) => t.id === linked)?.is_private) === priv ? linked : null,
       }),
     );
     if (ok !== null) onDone();
@@ -186,9 +186,9 @@ export function TaskForm({
           {priv && <p className="mt-1 text-sm text-slate-500">Rangée dans « Pour moi », invisible pour l’autre.</p>}
         </div>
       )}
-      {!priv && suggestions.length > 0 && (
+      {suggestions.length > 0 && (
         <div>
-          <Label>Lier à un sujet à deux (facultatif)</Label>
+          <Label>{priv ? "Lier à un de mes sujets (facultatif)" : "Lier à un sujet à deux (facultatif)"}</Label>
           <div className="flex flex-wrap gap-2">
             {suggestions.map((t) => (
               <button
@@ -237,13 +237,14 @@ export function TopicForm({ onDone }: { onDone: (id?: UUID) => void }) {
   const { s, run } = useReady();
   const [title, setTitle] = useState("");
   const [mine, setMine] = useState(false);
+  const [priv, setPriv] = useState(false);
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
     const row = await run(() =>
       supabase()
         .from("topics")
-        .insert({ couple_id: s.couple.id, title: title.trim(), owner_id: mine ? s.me : null })
+        .insert({ couple_id: s.couple.id, title: title.trim(), owner_id: mine || priv ? s.me : null, is_private: priv })
         .select("id")
         .single(),
     );
@@ -263,11 +264,29 @@ export function TopicForm({ onDone }: { onDone: (id?: UUID) => void }) {
           />
         </div>
       </label>
-      <label className="flex items-center gap-3 text-[15px]">
-        <input type="checkbox" className="h-5 w-5" checked={mine} onChange={(e) => setMine(e.target.checked)} />
-        Je m’en occupe
-      </label>
-      <p className="text-sm text-slate-500">Sinon, le sujet reste « À prendre en charge » jusqu’à ce que l’un de vous le prenne.</p>
+      <div>
+        <Label>Visible par</Label>
+        <Segmented
+          name="Visibilité du sujet"
+          value={priv ? "me" : "both"}
+          onChange={(v) => setPriv(v === "me")}
+          options={[
+            { value: "both", label: "Nous deux" },
+            { value: "me", label: "Juste moi" },
+          ]}
+        />
+      </div>
+      {priv ? (
+        <p className="text-sm text-violet-700">Sujet perso, invisible pour l’autre. Tu en es le responsable.</p>
+      ) : (
+        <>
+          <label className="flex items-center gap-3 text-[15px]">
+            <input type="checkbox" className="h-5 w-5" checked={mine} onChange={(e) => setMine(e.target.checked)} />
+            Je m’en occupe
+          </label>
+          <p className="text-sm text-slate-500">Sinon, le sujet reste « À prendre en charge » jusqu’à ce que l’un de vous le prenne.</p>
+        </>
+      )}
       <Button type="submit" className="w-full" disabled={!title.trim()}>
         Créer le sujet
       </Button>

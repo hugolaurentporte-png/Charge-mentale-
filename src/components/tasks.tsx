@@ -14,16 +14,72 @@ function origin(t: Task, topicTitle?: string) {
   return <Badge>À deux</Badge>;
 }
 
+const EMOJIS = ["👍", "😊", "❤️", "🙏", "💪", "🎉", "😅"];
+
+/** Réactions sur une tâche partagée : une par personne, touche à nouveau pour la retirer. */
+function Reactions({ task }: { task: Task }) {
+  const { s, run, who } = useReady();
+  const [picking, setPicking] = useState(false);
+  const list = s.reactions.filter((r) => r.task_id === task.id);
+  const mine = list.find((r) => r.user_id === s.me);
+  const react = async (emoji: string) => {
+    setPicking(false);
+    if (mine?.emoji === emoji) {
+      await run(() => supabase().from("task_reactions").delete().eq("task_id", task.id).eq("user_id", s.me));
+    } else {
+      await run(() =>
+        supabase().from("task_reactions").upsert({ task_id: task.id, user_id: s.me, emoji }, { onConflict: "task_id,user_id" }),
+      );
+    }
+  };
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-1.5 pl-9">
+      {list.map((r) => (
+        <button
+          key={r.user_id}
+          onClick={() => r.user_id === s.me && void react(r.emoji)}
+          aria-label={`${r.emoji} de ${who(r.user_id)}`}
+          className={`flex h-8 items-center gap-1 rounded-full px-2 text-sm ${
+            r.user_id === s.me ? "bg-violet-100 ring-1 ring-violet-300" : "bg-slate-100"
+          }`}
+        >
+          <span>{r.emoji}</span>
+          <span className="text-xs font-semibold text-slate-600">{who(r.user_id)}</span>
+        </button>
+      ))}
+      {picking ? (
+        <div className="flex flex-wrap gap-1 rounded-full bg-slate-100 px-1 py-0.5" role="group" aria-label="Choisir une réaction">
+          {EMOJIS.map((e) => (
+            <button key={e} onClick={() => void react(e)} aria-label={`Réagir ${e}`} className="h-8 w-8 rounded-full text-lg active:scale-90">
+              {e}
+            </button>
+          ))}
+        </div>
+      ) : (
+        <button
+          onClick={() => setPicking(true)}
+          aria-label="Ajouter une réaction"
+          className="flex h-8 items-center rounded-full bg-slate-50 px-2 text-sm text-slate-500 ring-1 ring-slate-200"
+        >
+          {mine ? "Changer" : "☺︎ +"}
+        </button>
+      )}
+    </div>
+  );
+}
+
 /** Ligne de tâche : case à cocher, titre, provenance, responsable. */
 export function TaskRow({ task, overdue = false, showDate = false }: { task: Task; overdue?: boolean; showDate?: boolean }) {
-  const { s, run, today } = useReady();
+  const { s, run, today, toast } = useReady();
   const [open, setOpen] = useState(false);
   const [pick, setPick] = useState(false);
   const topic = s.topics.find((t) => t.id === task.topic_id);
   const [done, setLocalDone] = useOptimistic(task.done);
-  const setDone = (d: boolean) => {
+  const setDone = async (d: boolean, undoable = true) => {
     setLocalDone(d);
-    return run(() => supabase().from("tasks").update({ done: d }).eq("id", task.id));
+    const ok = await run(() => supabase().from("tasks").update({ done: d }).eq("id", task.id));
+    if (ok !== null && d && undoable) toast(`« ${task.title} » terminée`, () => void setDone(false, false));
+    return ok;
   };
   const move = (d: string) => run(() => supabase().from("tasks").update({ due_date: d }).eq("id", task.id));
   return (
@@ -53,6 +109,7 @@ export function TaskRow({ task, overdue = false, showDate = false }: { task: Tas
           {task.note && <p className="mt-1 line-clamp-2 text-sm italic text-slate-600">« {task.note} »</p>}
         </button>
       </div>
+      {!task.is_private && <Reactions task={task} />}
       {overdue && (
         <div className="mt-3 flex gap-2">
           <Button kind="secondary" className="flex-1" onClick={() => void setDone(true)}>
@@ -81,7 +138,7 @@ export function TaskRow({ task, overdue = false, showDate = false }: { task: Tas
 }
 
 export function TaskSheet({ task, onClose }: { task: Task; onClose: () => void }) {
-  const { s, partner, run } = useReady();
+  const { s, partner, run, deferDelete } = useReady();
   const [title, setTitle] = useState(task.title);
   const [who, setWho] = useState<WhoChoice>(idToWho(task.assignee_id, s.me));
   const [date, setDate] = useState(task.due_date ?? "");
@@ -107,9 +164,9 @@ export function TaskSheet({ task, onClose }: { task: Task; onClose: () => void }
     );
     if (ok !== null) onClose();
   };
-  const remove = async () => {
-    const ok = await run(() => supabase().from("tasks").delete().eq("id", task.id), "Tâche supprimée");
-    if (ok !== null) onClose();
+  const remove = () => {
+    onClose();
+    deferDelete(task.id, `« ${task.title} » supprimée`, () => supabase().from("tasks").delete().eq("id", task.id));
   };
   if (appt) {
     return (
