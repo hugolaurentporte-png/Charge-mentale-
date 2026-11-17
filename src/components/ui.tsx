@@ -127,6 +127,19 @@ export function Button({
   );
 }
 
+export function Textarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  return (
+    <textarea
+      rows={2}
+      maxLength={500}
+      {...props}
+      className={`w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-base outline-none focus:border-slate-900 ${
+        props.className ?? ""
+      }`}
+    />
+  );
+}
+
 export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input

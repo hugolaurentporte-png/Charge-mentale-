@@ -6,6 +6,7 @@ import { useReady } from "@/lib/store";
 import { BASE } from "@/lib/base";
 import { Button, Input, Label, Section, Segmented } from "@/components/ui";
 import { PushSettings } from "@/components/push";
+import { AgendaSettings } from "@/components/agenda";
 
 export default function ReglagesPage() {
   const { s, run, partner, toast } = useReady();
@@ -106,6 +107,10 @@ export default function ReglagesPage() {
 
       <Section title="Notifications">
         <PushSettings />
+      </Section>
+
+      <Section title="Agenda">
+        <AgendaSettings />
       </Section>
 
       <Button

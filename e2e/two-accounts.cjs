@@ -364,6 +364,18 @@ async function api(user, path, init = {}) {
   await shot(h, "11-tache-perso-heure");
   ok("Tâche perso avec une heure : « Kiné » demain à 18 h 15");
 
+  // Petit mot et répétition sur la même tâche, puis la suivante apparaît une fois terminée
+  await h.getByText("Kiné", { exact: true }).first().click();
+  await h.getByLabel("Répéter").selectOption("weekly");
+  await h.getByLabel("Petit mot").fill("Prendre l’ordonnance");
+  await h.getByRole("button", { name: "Enregistrer" }).click();
+  await see(h, "↻ Chaque semaine");
+  await see(h, "« Prendre l’ordonnance »");
+  await h.getByLabel("Terminer Kiné").first().check();
+  await h.waitForFunction(() => document.querySelectorAll('input[aria-label="Terminer Kiné"]').length === 2, null, { timeout: 8000 });
+  await shot(h, "12-recurrence-note");
+  ok("Petit mot et répétition : une fois « Kiné » terminée, la séance de la semaine suivante est créée");
+
   await browser.close();
   console.log(`\n${steps.length} vérifications passées.`);
 })().catch(async (err) => {

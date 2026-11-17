@@ -16,7 +16,11 @@ Fuseau par défaut : Europe/Paris.
 - **Pour moi** : tâches perso, objectifs, listes privées (dont « Mes surprises »), invisibles pour le partenaire.
 - **Synchronisation temps réel** entre les deux comptes.
 
-Les notifications push ne sont pas dans la V1 : les rappels et demandes de relais s’affichent dans l’application.
+## Ajouts depuis la V1
+
+- **Tâches** : heure facultative, petit mot, répétition (jour, semaine, 2 semaines, mois : la suivante est créée quand on termine), saisie à la voix (« Sortir les poubelles tous les mardis à 20 h »).
+- **Notifications push** (`push_subscriptions`, trigger `notify_trigger` → pg_net → fonction Edge `notify`). Clés VAPID et secret dans Vault : `notify_url`, `notify_secret`, `vapid_public`, `vapid_private`, `vapid_subject`. Sur iPhone, l’app doit être ajoutée à l’écran d’accueil.
+- **Agenda** : lien d’abonnement iCal personnel (fonction Edge `agenda`, `agenda_ics`) pour l’agenda Apple ou Google Agenda.
 
 ## Lancer le projet
 

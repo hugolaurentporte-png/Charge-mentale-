@@ -60,6 +60,9 @@ export interface Task {
   assignee_id: UUID | null;
   due_date: string | null;
   due_time: string | null;
+  note: string | null;
+  recurrence: "daily" | "weekly" | "biweekly" | "monthly" | null;
+  recur_from: UUID | null;
   done: boolean;
   done_at: string | null;
   is_private: boolean;

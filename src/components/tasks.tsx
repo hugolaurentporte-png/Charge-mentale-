@@ -5,8 +5,8 @@ import { supabase } from "@/lib/supabase";
 import { useReady } from "@/lib/store";
 import { addDays, formatTime, relativeDay } from "@/lib/dates";
 import type { Task } from "@/lib/types";
-import { AppointmentForm, idToWho, useWhoOptions, whoToId, type WhoChoice } from "./forms";
-import { Badge, Button, Input, Label, Person, Segmented, Sheet, useOptimistic } from "./ui";
+import { AppointmentForm, idToWho, recurrenceLabel, TimeAndRepeat, useWhoOptions, whoToId, type RecurrenceChoice, type WhoChoice } from "./forms";
+import { Badge, Button, Input, Label, Person, Segmented, Sheet, Textarea, useOptimistic } from "./ui";
 
 function origin(t: Task, topicTitle?: string) {
   if (t.is_private) return <Badge tone="violet">Pour moi</Badge>;
@@ -48,7 +48,9 @@ export function TaskRow({ task, overdue = false, showDate = false }: { task: Tas
               </span>
             )}
             {task.due_time && <span className="font-semibold text-slate-700">{formatTime(task.due_time)}</span>}
+            {task.recurrence && <span className="text-slate-500">↻ {recurrenceLabel(task.recurrence)}</span>}
           </div>
+          {task.note && <p className="mt-1 line-clamp-2 text-sm italic text-slate-600">« {task.note} »</p>}
         </button>
       </div>
       {overdue && (
@@ -84,6 +86,8 @@ export function TaskSheet({ task, onClose }: { task: Task; onClose: () => void }
   const [who, setWho] = useState<WhoChoice>(idToWho(task.assignee_id, s.me));
   const [date, setDate] = useState(task.due_date ?? "");
   const [time, setTime] = useState(task.due_time?.slice(0, 5) ?? "");
+  const [repeat, setRepeat] = useState<RecurrenceChoice>(task.recurrence ?? "");
+  const [note, setNote] = useState(task.note ?? "");
   const [appt, setAppt] = useState(false);
   const opts = useWhoOptions();
   const topic = s.topics.find((t) => t.id === task.topic_id);
@@ -95,6 +99,8 @@ export function TaskSheet({ task, onClose }: { task: Task; onClose: () => void }
           title: title.trim() || task.title,
           due_date: date || null,
           due_time: date && time ? time : null,
+          recurrence: date && repeat ? repeat : null,
+          note: note.trim() || null,
           assignee_id: task.is_private ? task.owner_id : whoToId(who, s.me, partner?.id),
         })
         .eq("id", task.id),
@@ -136,12 +142,11 @@ export function TaskSheet({ task, onClose }: { task: Task; onClose: () => void }
             )}
           </div>
         </label>
-        {date && (
-          <label className="block w-40">
-            <Label>Heure (facultatif)</Label>
-            <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
-          </label>
-        )}
+        {date && <TimeAndRepeat time={time} setTime={setTime} repeat={repeat} setRepeat={setRepeat} />}
+        <label className="block">
+          <Label>Petit mot</Label>
+          <Textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Ajouter un mot pour l’autre" />
+        </label>
         {topic && (
           <Link href={`/sujets/voir?id=${topic.id}`} className="block text-sm font-semibold text-slate-600 underline">
             Sujet : {topic.title}

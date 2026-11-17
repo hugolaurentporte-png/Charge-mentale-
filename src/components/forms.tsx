@@ -4,7 +4,9 @@ import { supabase } from "@/lib/supabase";
 import { useReady } from "@/lib/store";
 import { addDays } from "@/lib/dates";
 import type { GiftStatus, ListItem, Task, UUID } from "@/lib/types";
-import { Button, Input, Label, Segmented } from "./ui";
+import { Button, Input, Label, Segmented, Textarea } from "./ui";
+import { VoiceButton } from "./voice";
+import { parseSpoken } from "@/lib/speech";
 
 export type WhoChoice = "me" | "partner" | "none";
 
@@ -58,6 +60,55 @@ function DateQuick({ value, onChange, today }: { value: string; onChange: (v: st
 }
 
 /** Nouvelle tâche (partagée ou privée) ; seul le titre est obligatoire. */
+export const RECURRENCES = [
+  { value: "", label: "Ne se répète pas" },
+  { value: "daily", label: "Chaque jour" },
+  { value: "weekly", label: "Chaque semaine" },
+  { value: "biweekly", label: "Toutes les 2 semaines" },
+  { value: "monthly", label: "Chaque mois" },
+] as const;
+export type RecurrenceChoice = (typeof RECURRENCES)[number]["value"];
+
+export function recurrenceLabel(r: string | null): string | null {
+  return RECURRENCES.find((x) => x.value === r && r)?.label ?? null;
+}
+
+/** Heure et répétition, affichées une fois le jour choisi. */
+export function TimeAndRepeat({
+  time,
+  setTime,
+  repeat,
+  setRepeat,
+}: {
+  time: string;
+  setTime: (v: string) => void;
+  repeat: RecurrenceChoice;
+  setRepeat: (v: RecurrenceChoice) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-3">
+      <label className="block w-36">
+        <Label>Heure (facultatif)</Label>
+        <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+      </label>
+      <label className="block min-w-0 flex-1">
+        <Label>Répéter</Label>
+        <select
+          value={repeat}
+          onChange={(e) => setRepeat(e.target.value as RecurrenceChoice)}
+          className="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-[16px]"
+        >
+          {RECURRENCES.map((r) => (
+            <option key={r.value} value={r.value}>
+              {r.label}
+            </option>
+          ))}
+        </select>
+      </label>
+    </div>
+  );
+}
+
 export function TaskForm({
   day,
   isPrivate = false,
@@ -74,7 +125,16 @@ export function TaskForm({
   const [who, setWho] = useState<WhoChoice>(isPrivate ? "me" : "none");
   const [date, setDate] = useState(day ?? "");
   const [time, setTime] = useState("");
+  const [repeat, setRepeat] = useState<RecurrenceChoice>("");
+  const [note, setNote] = useState("");
   const opts = useWhoOptions();
+  const fromVoice = (text: string) => {
+    const p = parseSpoken(text, today);
+    setTitle(p.title);
+    if (p.date) setDate(p.date);
+    if (p.time) setTime(p.time);
+    if (p.recurrence) setRepeat(p.recurrence);
+  };
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
@@ -84,6 +144,8 @@ export function TaskForm({
         title: title.trim(),
         due_date: date || null,
         due_time: date && time ? time : null,
+        recurrence: date && repeat ? repeat : null,
+        note: note.trim() || null,
         is_private: isPrivate,
         assignee_id: isPrivate ? s.me : whoToId(who, s.me, partner?.id),
         topic_id: topicId ?? null,
@@ -95,7 +157,10 @@ export function TaskForm({
     <form onSubmit={submit} className="space-y-4">
       <label className="block">
         <Label>Titre</Label>
-        <Input autoFocus value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Appeler la banque" />
+        <div className="flex gap-2">
+          <Input autoFocus value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Appeler la banque" />
+          <VoiceButton onText={fromVoice} />
+        </div>
       </label>
       {!isPrivate && (
         <div>
@@ -107,12 +172,11 @@ export function TaskForm({
         <Label>Quand ?</Label>
         <DateQuick value={date} onChange={setDate} today={today} />
       </div>
-      {date && (
-        <label className="block w-40">
-          <Label>Heure (facultatif)</Label>
-          <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
-        </label>
-      )}
+      {date && <TimeAndRepeat time={time} setTime={setTime} repeat={repeat} setRepeat={setRepeat} />}
+      <label className="block">
+        <Label>Petit mot (facultatif)</Label>
+        <Textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Code du portail : 1234" />
+      </label>
       <Button type="submit" className="w-full" disabled={!title.trim()}>
         Ajouter
       </Button>
@@ -141,7 +205,15 @@ export function TopicForm({ onDone }: { onDone: (id?: UUID) => void }) {
     <form onSubmit={submit} className="space-y-4">
       <label className="block">
         <Label>Sujet</Label>
-        <Input autoFocus value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Banque" />
+        <div className="flex gap-2">
+          <Input autoFocus value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Banque" />
+          <VoiceButton
+            onText={(t) => {
+              if (/je m['’]en (occupe|charge)/i.test(t)) setMine(true);
+              setTitle(parseSpoken(t.replace(/,?\s*je m['’]en (occupe|charge)/i, ""), "2000-01-01").title);
+            }}
+          />
+        </div>
       </label>
       <label className="flex items-center gap-3 text-[15px]">
         <input type="checkbox" className="h-5 w-5" checked={mine} onChange={(e) => setMine(e.target.checked)} />

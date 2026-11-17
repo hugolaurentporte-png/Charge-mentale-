@@ -55,7 +55,7 @@ test("Crèche : vendredi non couvert remonte chez l'organisateur, pas chez l'aut
 });
 
 test("Accueil : tâches privées seulement pour leur propriétaire, retard trié", () => {
-  const base = { couple_id: "k", done: false, done_at: null, due_time: null, topic_id: null, created_at: "" };
+  const base = { couple_id: "k", done: false, done_at: null, due_time: null, note: null, recurrence: null, recur_from: null, topic_id: null, created_at: "" };
   const tasks = [
     { ...base, id: "a", title: "Surprise", assignee_id: null, due_date: "2026-11-17", is_private: true, owner_id: HUGO },
     { ...base, id: "b", title: "Pharmacie", assignee_id: null, due_date: "2026-11-17", is_private: false, owner_id: HUGO },
