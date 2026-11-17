@@ -194,8 +194,12 @@ function Week({ onToday }: { onToday: () => void }) {
                   className="mt-2 flex cursor-pointer items-center gap-2 rounded-xl px-2 py-2"
                   style={{ background: p.responsible_id ? "var(--color-slate-50)" : "var(--color-orange-50)", borderLeft: `4px solid ${s.profiles.find((x) => x.id === p.responsible_id)?.color ?? ORANGE}` }}
                 >
-                  <span className="w-16 shrink-0 whitespace-nowrap font-extrabold">{formatTime(p.time)}</span>
+                  <span className="w-20 shrink-0 whitespace-nowrap leading-tight">
+                    {p.start_time && <span className="block text-xs text-slate-500">{formatTime(p.start_time)} –</span>}
+                    <span className="font-extrabold">{formatTime(p.time)}</span>
+                  </span>
                   <span className="min-w-0 flex-1 text-sm">
+                    <span className="block text-xs font-bold uppercase tracking-wide text-slate-500">Crèche</span>
                     <Person id={p.responsible_id} />
                     {relay && <span className="ml-2 text-xs text-slate-500">relais en attente</span>}
                   </span>

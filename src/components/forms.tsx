@@ -7,6 +7,8 @@ import type { GiftStatus, ListItem, Task, UUID } from "@/lib/types";
 import { Button, Input, Label, Segmented, Textarea } from "./ui";
 import { VoiceButton } from "./voice";
 import { parseSpoken } from "@/lib/speech";
+import Link from "next/link";
+import { weekLabel } from "@/lib/dates";
 
 export type WhoChoice = "me" | "partner" | "none";
 
@@ -109,6 +111,46 @@ export function TimeAndRepeat({
   );
 }
 
+/** Titres déjà utilisés, du plus fréquent au moins fréquent (filtrés par la saisie). */
+function frequentTitles(titles: string[], typed: string, max = 6): string[] {
+  const counts = new Map<string, { label: string; n: number; last: number }>();
+  titles.forEach((t, i) => {
+    const label = t.trim();
+    if (!label) return;
+    const k = label.toLowerCase();
+    const c = counts.get(k);
+    if (c) {
+      c.n += 1;
+      c.last = i;
+    } else counts.set(k, { label, n: 1, last: i });
+  });
+  const q = typed.trim().toLowerCase();
+  return [...counts.entries()]
+    .filter(([k]) => (!q || k.includes(q)) && k !== q)
+    .sort((a, b) => b[1].n - a[1].n || b[1].last - a[1].last)
+    .slice(0, max)
+    .map(([, v]) => v.label);
+}
+
+function QuickTitles({ titles, typed, onPick }: { titles: string[]; typed: string; onPick: (t: string) => void }) {
+  const list = frequentTitles(titles, typed);
+  if (!list.length) return null;
+  return (
+    <div className="mt-2 flex flex-wrap gap-2" aria-label="Déjà utilisés">
+      {list.map((t) => (
+        <button
+          key={t}
+          type="button"
+          onClick={() => onPick(t)}
+          className="rounded-full bg-slate-100 px-3 py-1.5 text-sm font-semibold text-slate-700"
+        >
+          {t}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function TaskForm({
   day,
   isPrivate = false,
@@ -171,6 +213,7 @@ export function TaskForm({
           <VoiceButton onText={fromVoice} />
         </div>
       </label>
+      <QuickTitles titles={s.tasks.map((t) => t.title)} typed={title} onPick={setTitle} />
       {!isPrivate && !topicId && (
         <div>
           <Label>Visible par</Label>
@@ -238,6 +281,17 @@ export function TopicForm({ onDone }: { onDone: (id?: UUID) => void }) {
   const [title, setTitle] = useState("");
   const [mine, setMine] = useState(false);
   const [priv, setPriv] = useState(false);
+  // Sujets déjà ouverts, pour ne pas en recréer un (filtrés par ce qui est tapé).
+  const q = title.trim().toLowerCase();
+  const existing = s.topics
+    .filter((t) => t.status === "open" && Boolean(t.is_private) === priv)
+    .map((t) => ({
+      t,
+      label: t.kind === "pickup_week" && t.week_start ? `Crèche · ${weekLabel(t.week_start)}` : t.title,
+      href: t.kind === "pickup_week" && t.week_start ? `/planning/organiser?semaine=${t.week_start}` : `/sujets/voir?id=${t.id}`,
+    }))
+    .filter((x) => !q || x.label.toLowerCase().includes(q))
+    .slice(0, 8);
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
@@ -290,6 +344,25 @@ export function TopicForm({ onDone }: { onDone: (id?: UUID) => void }) {
       <Button type="submit" className="w-full" disabled={!title.trim()}>
         Créer le sujet
       </Button>
+      {existing.length > 0 && (
+        <div>
+          <Label>{priv ? "Mes sujets en cours" : "Sujets à deux en cours"}</Label>
+          <div className="flex flex-wrap gap-2">
+            {existing.map(({ t, label, href }) => (
+              <Link
+                key={t.id}
+                href={href}
+                onClick={() => onDone()}
+                className={`rounded-full px-3 py-2 text-sm font-semibold ring-1 ${
+                  t.is_private ? "bg-violet-50 text-violet-800 ring-violet-200" : "bg-slate-50 text-slate-700 ring-slate-200"
+                }`}
+              >
+                {label} ›
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
     </form>
   );
 }
@@ -328,6 +401,7 @@ export function AppointmentForm({ day, fromTask, onDone }: { day?: string; fromT
         <Label>Rendez-vous</Label>
         <Input autoFocus={!fromTask} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Pédiatre" />
       </label>
+      {!fromTask && <QuickTitles titles={s.appointments.map((a) => a.title)} typed={title} onPick={setTitle} />}
       <div className="flex gap-3">
         <label className="block min-w-0 flex-1">
           <Label>Jour</Label>

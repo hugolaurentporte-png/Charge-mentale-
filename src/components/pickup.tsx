@@ -44,6 +44,7 @@ export function PickupEditSheet({ pickup, onClose }: { pickup: Pickup; onClose: 
   const { s, partner, run, today } = useReady();
   const a = usePickupActions();
   const [time, setTime] = useState(pickup.time.slice(0, 5));
+  const [start, setStart] = useState(pickup.start_time?.slice(0, 5) ?? "");
   const [whoSel, setWho] = useState<Who>(
     !pickup.responsible_id ? "undecided" : pickup.responsible_id === s.me ? "me" : "partner",
   );
@@ -53,19 +54,27 @@ export function PickupEditSheet({ pickup, onClose }: { pickup: Pickup; onClose: 
     { value: "undecided", label: "À décider" },
   ];
   const save = async () => {
-    const ok = await run(
-      () => supabase().rpc("save_pickups", { p_entries: [{ day: pickup.day, time, who: whoSel }] }),
-      "Récupération modifiée",
-    );
+    let ok = await run(() => supabase().rpc("save_pickups", { p_entries: [{ day: pickup.day, time, who: whoSel }] }));
+    if (ok !== null)
+      ok = await run(
+        () => supabase().rpc("save_pickup_starts", { p_entries: [{ day: pickup.day, start }] }),
+        "Crèche modifiée",
+      );
     if (ok !== null) onClose();
   };
   return (
     <Sheet open onClose={onClose} title={`${s.couple.pickup_label} · ${relativeDay(pickup.day, today)}`}>
       <div className="space-y-4">
-        <label className="block w-40">
-          <Label>Heure</Label>
-          <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
-        </label>
+        <div className="flex gap-3">
+          <label className="block flex-1">
+            <Label>Début de crèche</Label>
+            <Input type="time" aria-label="Début de crèche" value={start} onChange={(e) => setStart(e.target.value)} />
+          </label>
+          <label className="block flex-1">
+            <Label>Fin (récupération)</Label>
+            <Input type="time" aria-label="Heure" value={time} onChange={(e) => setTime(e.target.value)} />
+          </label>
+        </div>
         <div>
           <Label>Qui {s.couple.child_pronoun} récupère ?</Label>
           <Segmented name="Qui récupère" value={whoSel} onChange={setWho} options={opts} />
@@ -120,6 +129,11 @@ export function PickupCard({ pickup, compact = false }: { pickup: Pickup; compac
           {formatTime(pickup.time)} · {sentence}
         </div>
       </div>
+      {pickup.start_time && (
+        <div className="mt-1 text-sm text-slate-500">
+          Crèche de {formatTime(pickup.start_time)} à {formatTime(pickup.time)}
+        </div>
+      )}
       {unassigned && (
         <div className="mt-3 flex items-center justify-between gap-3">
           <span className="rounded-full bg-orange-100 px-3 py-1 text-sm font-bold text-orange-800">À décider</span>

@@ -111,6 +111,7 @@ async function api(user, path, init = {}) {
     await h.getByRole("radiogroup", { name: `Qui ${day}` }).getByRole("radio", { name: who }).click();
   };
   await setDay("mardi", "17:30", "Moi");
+  await h.getByLabel("Début mardi").fill("08:30");
   await setDay("mercredi", "18:00", "Camille");
   await setDay("jeudi", "16:45", "À décider");
   await setDay("vendredi", "17:15", "À décider");

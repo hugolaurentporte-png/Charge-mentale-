@@ -9,6 +9,7 @@ export interface Couple {
   timezone: string;
   default_pickup_time: string; // "17:30:00"
   pickups_enabled?: boolean;
+  default_start_time?: string | null;
   usual_days: number[]; // 1 = lundi … 7 = dimanche
   created_by: UUID;
 }
@@ -24,7 +25,8 @@ export interface Pickup {
   id: UUID;
   couple_id: UUID;
   day: string; // YYYY-MM-DD
-  time: string; // HH:MM:SS
+  time: string; // HH:MM:SS (fin de crèche = récupération)
+  start_time?: string | null; // début de crèche
   responsible_id: UUID | null;
   updated_at: string;
 }

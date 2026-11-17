@@ -12,7 +12,7 @@ import { PickupCard, usePickupActions } from "./pickup";
 export const PRIVATE_COLOR = "#7c3aed";
 
 export function topicTitle(t: Topic) {
-  return t.kind === "pickup_week" && t.week_start ? `${t.title} · semaine du ${weekLabel(t.week_start)}` : t.title;
+  return t.kind === "pickup_week" && t.week_start ? `Crèche · ${weekLabel(t.week_start)}` : t.title;
 }
 
 export function useTopicActions() {

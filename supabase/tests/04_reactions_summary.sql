@@ -126,5 +126,21 @@ do $$ declare h text; c text; begin
   assert c like '%SUMMARY:Resto copines' || E'\r\n' || '%', 'ma tâche sans prénom';
   assert c not like '%Surprise%', 'tâche privée de l''autre absente';
 end $$;
+
+-- Heure de début de crèche : enregistrée, et refusée si après l'heure de fin.
+set role authenticated;
+select pg_temp.login(:hugo);
+select public.save_pickups('[{"day":"2030-01-07","time":"17:30","who":"me"}]'::jsonb);
+select public.save_pickup_starts('[{"day":"2030-01-07","start":"08:30"}]'::jsonb);
+do $$ begin
+  assert (select start_time from public.pickups where day = '2030-01-07') = '08:30', 'début enregistré';
+  begin
+    perform public.save_pickup_starts('[{"day":"2030-01-07","start":"18:00"}]'::jsonb);
+    raise exception 'ECHEC début après fin accepté';
+  exception when others then
+    if sqlerrm like 'ECHEC%' then raise; end if;
+  end;
+  assert (select start_time from public.pickups where day = '2030-01-07') = '08:30', 'début inchangé après refus';
+end $$;
 reset role;
 select 'TOUS LES TESTS RETRAIT / ANNULER SONT PASSÉS' as resultat;

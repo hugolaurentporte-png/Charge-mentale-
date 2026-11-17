@@ -12,9 +12,10 @@ interface Row {
   day: string;
   on: boolean;
   time: string;
+  start: string;
   who: Who;
   existing: boolean;
-  initial: { on: boolean; time: string; who: Who };
+  initial: { on: boolean; time: string; start: string; who: Who };
 }
 
 const DAYS = ["L", "M", "M", "J", "V", "S", "D"];
@@ -27,6 +28,7 @@ function Organiser() {
   const topic = s.topics.find((t) => t.kind === "pickup_week" && t.week_start === start);
   const [usual, setUsual] = useState<number[]>(s.couple.usual_days);
   const [defTime, setDefTime] = useState(shortTime(s.couple.default_pickup_time));
+  const [defStart, setDefStart] = useState(s.couple.default_start_time ? shortTime(s.couple.default_start_time) : "");
   const [organize, setOrganize] = useState(!topic?.owner_id);
   const [saving, setSaving] = useState(false);
 
@@ -37,10 +39,11 @@ function Organiser() {
         ? {
             on: true,
             time: shortTime(p.time),
+            start: p.start_time ? shortTime(p.start_time) : "",
             who: (p.responsible_id === null ? "undecided" : p.responsible_id === s.me ? "me" : "partner") as Who,
           }
         : // Rien n'est coché d'office : saisir une heure ajoute le jour.
-          { on: false, time: "", who: "undecided" as Who };
+          { on: false, time: "", start: "", who: "undecided" as Who };
       return { day, existing: Boolean(p), initial: { ...init }, ...init };
     }),
   );
@@ -68,16 +71,22 @@ function Organiser() {
     setSaving(true);
     const habitsChanged =
       JSON.stringify([...usual].sort()) !== JSON.stringify([...s.couple.usual_days].sort()) ||
-      defTime !== shortTime(s.couple.default_pickup_time);
+      defTime !== shortTime(s.couple.default_pickup_time) ||
+      defStart !== (s.couple.default_start_time ? shortTime(s.couple.default_start_time) : "");
     if (habitsChanged) {
       await run(() =>
-        supabase().from("couples").update({ usual_days: [...usual].sort(), default_pickup_time: defTime }).eq("id", s.couple.id),
+        supabase()
+          .from("couples")
+          .update({ usual_days: [...usual].sort(), default_pickup_time: defTime, default_start_time: defStart || null })
+          .eq("id", s.couple.id),
       );
     }
-    const ok = await run(
-      () => supabase().rpc("save_pickups", { p_entries: entries, p_organize_week: organize ? start : null }),
-      "Récupérations enregistrées",
-    );
+    let ok = await run(() => supabase().rpc("save_pickups", { p_entries: entries, p_organize_week: organize ? start : null }));
+    const starts = rows
+      .filter((r) => r.day >= today && r.on && (r.start !== r.initial.start || !r.existing))
+      .map((r) => ({ day: r.day, start: r.start }));
+    if (ok !== null && starts.length) ok = await run(() => supabase().rpc("save_pickup_starts", { p_entries: starts }));
+    if (ok !== null) toast("Semaine enregistrée");
     setSaving(false);
     if (ok !== null) router.push("/planning");
   };
@@ -97,7 +106,11 @@ function Organiser() {
   const applyHabits = () =>
     setRows((rs) =>
       rs.map((r) =>
-        r.existing || r.day < today ? r : { ...r, on: usual.includes(isoWeekday(r.day)), time: defTime },
+        r.existing || r.day < today
+          ? r
+          : usual.includes(isoWeekday(r.day))
+            ? { ...r, on: true, time: defTime, start: defStart }
+            : { ...r, on: false, time: "", start: "" },
       ),
     );
 
@@ -141,7 +154,7 @@ function Organiser() {
       </div>
 
       <Button kind="secondary" className="mt-4 w-full" onClick={applyHabits}>
-        Remplir les jours habituels à {defTime.replace(":", " h ")}
+        Remplir les jours habituels{defStart ? ` (${defStart.replace(":", " h ")} – ` : " (fin "}{defTime.replace(":", " h ")})
       </Button>
 
       <div className="mt-3 space-y-3">
@@ -153,13 +166,25 @@ function Organiser() {
                 <div className="font-bold">
                   {capitalize(dayName(r.day))} {Number(r.day.slice(8))}
                 </div>
+              </div>
+              <div className="mt-2 flex items-center gap-2 text-sm text-slate-500">
+                <span>De</span>
+                <Input
+                  type="time"
+                  aria-label={`Début ${dayName(r.day)}`}
+                  value={r.on ? r.start : ""}
+                  disabled={past || !r.on}
+                  onChange={(e) => update(r.day, { start: e.target.value })}
+                  className={`!w-32 text-center font-bold ${r.on ? "" : "!border-dashed text-slate-400"}`}
+                />
+                <span>à</span>
                 <Input
                   type="time"
                   aria-label={`Heure ${dayName(r.day)}`}
                   value={r.on ? r.time : ""}
                   disabled={past}
                   onChange={(e) => update(r.day, e.target.value ? { time: e.target.value, on: true } : { time: "", on: false })}
-                  className={`!w-36 text-center text-lg font-bold ${r.on ? "" : "!border-dashed text-slate-400"}`}
+                  className={`!w-32 text-center font-bold ${r.on ? "" : "!border-dashed text-slate-400"}`}
                 />
               </div>
               {r.on && (
@@ -173,14 +198,14 @@ function Organiser() {
                   <button
                     type="button"
                     disabled={past}
-                    onClick={() => update(r.day, { on: false, time: "" })}
+                    onClick={() => update(r.day, { on: false, time: "", start: "" })}
                     className="mt-2 text-sm font-semibold text-slate-500 underline"
                   >
                     Pas de crèche ce jour-là
                   </button>
                 </div>
               )}
-              {!r.on && <div className="mt-1 text-sm text-slate-400">Pas de crèche · choisis une heure pour l’ajouter</div>}
+              {!r.on && <div className="mt-1 text-sm text-slate-400">Pas de crèche · choisis l’heure de fin pour l’ajouter</div>}
             </div>
           );
         })}
@@ -206,10 +231,16 @@ function Organiser() {
             );
           })}
         </div>
-        <label className="mt-3 block">
-          <Label>Heure par défaut</Label>
-          <Input type="time" value={defTime} onChange={(e) => setDefTime(e.target.value)} />
-        </label>
+        <div className="mt-3 flex gap-3">
+          <label className="block flex-1">
+            <Label>Début habituel</Label>
+            <Input type="time" value={defStart} onChange={(e) => setDefStart(e.target.value)} />
+          </label>
+          <label className="block flex-1">
+            <Label>Fin habituelle</Label>
+            <Input type="time" value={defTime} onChange={(e) => setDefTime(e.target.value)} />
+          </label>
+        </div>
         <Button kind="secondary" className="mt-3 w-full" onClick={applyHabits}>
           Appliquer aux jours non enregistrés
         </Button>
