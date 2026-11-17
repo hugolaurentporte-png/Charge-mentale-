@@ -5,10 +5,10 @@ import Link from "next/link";
 import { useReady } from "@/lib/store";
 import { addDays, capitalize, dayName, formatTime, weekDays, weekLabel, weekStart, nowTimeIn } from "@/lib/dates";
 import { appointmentsOn, pendingRelayFor, pickupOn, tasksOn, todayView } from "@/lib/selectors";
-import type { Appointment } from "@/lib/types";
+import type { Appointment, Pickup } from "@/lib/types";
 import { Header, useFab } from "@/components/shell";
 import { Avatar, Badge, Button, Empty, ORANGE, Person, Section, Segmented } from "@/components/ui";
-import { PickupCard, usePickupActions } from "@/components/pickup";
+import { PickupCard, PickupEditSheet, usePickupActions } from "@/components/pickup";
 import { TaskRow } from "@/components/tasks";
 import { DecisionRow, FollowUpRow } from "@/components/topics";
 
@@ -126,6 +126,7 @@ function Week({ onToday }: { onToday: () => void }) {
   const [start, setStart] = useState(() => weekStart(today));
   const [selected, setSelected] = useState(today);
   const a = usePickupActions();
+  const [editing, setEditing] = useState<Pickup | null>(null);
   useFab({ mode: "planning", day: selected });
   return (
     <div>
@@ -181,14 +182,22 @@ function Week({ onToday }: { onToday: () => void }) {
               </div>
               {p && (
                 <div
-                  className="mt-2 flex items-center gap-2 rounded-xl px-2 py-2"
+                  role={d >= today ? "button" : undefined}
+                  aria-label={d >= today ? `Modifier la récupération du ${dayName(d)}` : undefined}
+                  onClick={(e) => {
+                    if (d < today) return;
+                    e.stopPropagation();
+                    setEditing(p);
+                  }}
+                  className="mt-2 flex cursor-pointer items-center gap-2 rounded-xl px-2 py-2"
                   style={{ background: p.responsible_id ? "#f8fafc" : "#fff7ed", borderLeft: `4px solid ${s.profiles.find((x) => x.id === p.responsible_id)?.color ?? ORANGE}` }}
                 >
-                  <span className="w-14 font-extrabold">{formatTime(p.time)}</span>
-                  <span className="flex-1 text-sm">
+                  <span className="w-16 shrink-0 whitespace-nowrap font-extrabold">{formatTime(p.time)}</span>
+                  <span className="min-w-0 flex-1 text-sm">
                     <Person id={p.responsible_id} />
                     {relay && <span className="ml-2 text-xs text-slate-500">relais en attente</span>}
                   </span>
+                  {d >= today && p.responsible_id && <span className="text-xl text-slate-400" aria-hidden>›</span>}
                   {!p.responsible_id && d >= today && (
                     <Button
                       kind="orange"
@@ -226,6 +235,7 @@ function Week({ onToday }: { onToday: () => void }) {
           );
         })}
       </div>
+      {editing && <PickupEditSheet pickup={editing} onClose={() => setEditing(null)} />}
     </div>
   );
 }

@@ -388,6 +388,14 @@ async function api(user, path, init = {}) {
   await shot(h, "13-heure-modifiee");
   ok("L’heure de la récupération du jour se modifie depuis la carte (18 h 10), visible chez les deux");
 
+  // Semaine : toucher une récupération pour la modifier ou la retirer
+  await h.getByRole("radio", { name: "Semaine" }).click();
+  await h.getByRole("button", { name: "Modifier la récupération du vendredi" }).click();
+  await h.getByRole("button", { name: "Pas de crèche ce jour-là" }).click();
+  await h.waitForFunction(() => !document.querySelector('[aria-label="Modifier la récupération du vendredi"]'), null, { timeout: 8000 });
+  await shot(h, "14-semaine-pas-de-creche");
+  ok("Semaine : un jour de crèche se retire d’un geste (« Pas de crèche ce jour-là »)");
+
   await browser.close();
   console.log(`\n${steps.length} vérifications passées.`);
 })().catch(async (err) => {

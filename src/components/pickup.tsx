@@ -40,7 +40,7 @@ export function pickupSentence(p: Pickup, me: string, name: (id: string) => stri
 type Who = "me" | "partner" | "undecided";
 
 /** Modifier une récupération précise : heure, qui, ou pas de crèche ce jour-là. */
-function PickupEditSheet({ pickup, onClose }: { pickup: Pickup; onClose: () => void }) {
+export function PickupEditSheet({ pickup, onClose }: { pickup: Pickup; onClose: () => void }) {
   const { s, partner, run, today } = useReady();
   const a = usePickupActions();
   const [time, setTime] = useState(pickup.time.slice(0, 5));
