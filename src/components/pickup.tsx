@@ -1,10 +1,11 @@
 "use client";
 import { supabase } from "@/lib/supabase";
 import { useReady } from "@/lib/store";
-import { formatTime, relativeDay } from "@/lib/dates";
+import { formatTime, relativeDay, todayIn } from "@/lib/dates";
 import { pendingRelayFor } from "@/lib/selectors";
 import type { Pickup } from "@/lib/types";
-import { Avatar, Button, ORANGE } from "./ui";
+import { useState } from "react";
+import { Avatar, Button, Input, Label, ORANGE, Segmented, Sheet } from "./ui";
 
 export function usePickupActions() {
   const { s, run, toast, who } = useReady();
@@ -20,6 +21,11 @@ export function usePickupActions() {
       run(() => supabase().rpc("request_relay", { p_pickup: p.id }), "Demande de relais envoyée"),
     respond: (id: string, accept: boolean) =>
       run(() => supabase().rpc("respond_relay", { p_request: id, p_accept: accept }), accept ? "Relais accepté" : "Relais refusé"),
+    noCreche: (p: Pickup) =>
+      run(
+        () => supabase().rpc("save_pickups", { p_entries: [{ day: p.day, none: true }] }),
+        `Pas de crèche ${relativeDay(p.day, todayIn(s.couple.timezone)).toLowerCase()}`,
+      ),
     cancel: (id: string) => run(() => supabase().rpc("cancel_relay", { p_request: id }), "Demande annulée"),
   };
 }
@@ -31,8 +37,60 @@ export function pickupSentence(p: Pickup, me: string, name: (id: string) => stri
   return `${name(p.responsible_id)} récupère ${child}`;
 }
 
+type Who = "me" | "partner" | "undecided";
+
+/** Modifier une récupération précise : heure, qui, ou pas de crèche ce jour-là. */
+function PickupEditSheet({ pickup, onClose }: { pickup: Pickup; onClose: () => void }) {
+  const { s, partner, run, today } = useReady();
+  const a = usePickupActions();
+  const [time, setTime] = useState(pickup.time.slice(0, 5));
+  const [whoSel, setWho] = useState<Who>(
+    !pickup.responsible_id ? "undecided" : pickup.responsible_id === s.me ? "me" : "partner",
+  );
+  const opts: { value: Who; label: string }[] = [
+    { value: "me", label: "Moi" },
+    ...(partner ? [{ value: "partner" as Who, label: partner.display_name }] : []),
+    { value: "undecided", label: "À décider" },
+  ];
+  const save = async () => {
+    const ok = await run(
+      () => supabase().rpc("save_pickups", { p_entries: [{ day: pickup.day, time, who: whoSel }] }),
+      "Récupération modifiée",
+    );
+    if (ok !== null) onClose();
+  };
+  return (
+    <Sheet open onClose={onClose} title={`${s.couple.pickup_label} · ${relativeDay(pickup.day, today)}`}>
+      <div className="space-y-4">
+        <label className="block w-40">
+          <Label>Heure</Label>
+          <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+        </label>
+        <div>
+          <Label>Qui {s.couple.child_pronoun} récupère ?</Label>
+          <Segmented name="Qui récupère" value={whoSel} onChange={setWho} options={opts} />
+        </div>
+        <Button className="w-full" disabled={!time} onClick={() => void save()}>
+          Enregistrer
+        </Button>
+        <Button
+          kind="secondary"
+          className="w-full"
+          onClick={() => void a.noCreche(pickup).then((ok) => ok !== null && onClose())}
+        >
+          Pas de crèche ce jour-là
+        </Button>
+        <p className="text-sm text-slate-500">
+          Pour changer l’heure habituelle de tous les jours : Planning › Organiser la semaine › Heure par défaut.
+        </p>
+      </div>
+    </Sheet>
+  );
+}
+
 export function PickupCard({ pickup, compact = false }: { pickup: Pickup; compact?: boolean }) {
   const { s, who, today, partner } = useReady();
+  const [editing, setEditing] = useState(false);
   const a = usePickupActions();
   const relay = pendingRelayFor(s, pickup.id);
   const child = s.couple.child_name;
@@ -45,9 +103,17 @@ export function PickupCard({ pickup, compact = false }: { pickup: Pickup; compac
       style={{ borderColor: color }}
       className={`rounded-3xl border-[3px] bg-white shadow-sm ${compact ? "p-3" : "p-5"} ${unassigned ? "bg-orange-50" : ""}`}
     >
-      <div className="text-sm font-semibold text-slate-500">
-        {s.couple.pickup_label} · {relativeDay(pickup.day, today)}
+      <div className="flex items-center justify-between gap-2 text-sm font-semibold text-slate-500">
+        <span>
+          {s.couple.pickup_label} · {relativeDay(pickup.day, today)}
+        </span>
+        {pickup.day >= today && (
+          <button onClick={() => setEditing(true)} className="font-semibold text-slate-600 underline">
+            Modifier
+          </button>
+        )}
       </div>
+      {editing && <PickupEditSheet pickup={pickup} onClose={() => setEditing(false)} />}
       <div className="mt-2 flex items-center gap-3">
         <Avatar id={pickup.responsible_id} size={compact ? 36 : 48} />
         <div className={`${compact ? "text-lg" : "text-2xl"} font-extrabold leading-tight`}>
@@ -57,9 +123,14 @@ export function PickupCard({ pickup, compact = false }: { pickup: Pickup; compac
       {unassigned && (
         <div className="mt-3 flex items-center justify-between gap-3">
           <span className="rounded-full bg-orange-100 px-3 py-1 text-sm font-bold text-orange-800">À décider</span>
-          <Button kind="orange" onClick={() => void a.claim(pickup)}>
-            Je {s.couple.child_pronoun} récupère
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button kind="ghost" onClick={() => void a.noCreche(pickup)}>
+              Pas de crèche
+            </Button>
+            <Button kind="orange" onClick={() => void a.claim(pickup)}>
+              Je {s.couple.child_pronoun} récupère
+            </Button>
+          </div>
         </div>
       )}
       {relay && relay.from_user === s.me && (

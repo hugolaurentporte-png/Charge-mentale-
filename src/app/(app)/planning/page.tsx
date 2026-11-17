@@ -3,7 +3,7 @@ import { PushNudge } from "@/components/push";
 import { useState } from "react";
 import Link from "next/link";
 import { useReady } from "@/lib/store";
-import { addDays, capitalize, dayName, formatTime, weekDays, weekLabel, weekStart } from "@/lib/dates";
+import { addDays, capitalize, dayName, formatTime, weekDays, weekLabel, weekStart, nowTimeIn } from "@/lib/dates";
 import { appointmentsOn, pendingRelayFor, pickupOn, tasksOn, todayView } from "@/lib/selectors";
 import type { Appointment } from "@/lib/types";
 import { Header, useFab } from "@/components/shell";
@@ -33,7 +33,7 @@ function ApptRow({ a }: { a: Appointment }) {
 function Today() {
   const { s, today } = useReady();
   useFab({ mode: "planning", day: today });
-  const v = todayView(s, today);
+  const v = todayView(s, today, nowTimeIn(s.couple.timezone));
   const favs = s.lists.filter((l) => s.favorites.includes(l.id));
   const nothing =
     !v.appointments.length && !v.tasks.length && !v.overdue.length && !v.followUps.length && !v.decisions.length;

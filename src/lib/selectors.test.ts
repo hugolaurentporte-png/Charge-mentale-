@@ -77,3 +77,20 @@ test("Dates en français et fuseau Europe/Paris", () => {
   // 23 h 30 UTC le 17/11 = 00 h 30 le 18/11 à Paris
   assert.equal(todayIn("Europe/Paris", new Date("2026-11-17T23:30:00Z")), "2026-11-18");
 });
+
+test("Accueil : pas de doublon entre la carte du jour/demain et les suivis, et plus rien à décider une fois l'heure passée", () => {
+  const week = topic({ id: "w", kind: "pickup_week", week_start: "2026-11-16", owner_id: HUGO, title: "Organiser la crèche" });
+  const pickups = [
+    { id: "1", couple_id: "k", day: "2026-11-17", time: "17:30:00", responsible_id: null, updated_at: "" },
+    { id: "2", couple_id: "k", day: "2026-11-18", time: "17:30:00", responsible_id: null, updated_at: "" },
+    { id: "3", couple_id: "k", day: "2026-11-20", time: "17:30:00", responsible_id: null, updated_at: "" },
+  ];
+  const s = snap(HUGO, { topics: [week], pickups });
+  const morning = todayView(s, "2026-11-17", "09:00");
+  assert.equal(morning.pickup?.id, "1");
+  assert.equal(morning.tomorrowToOrganize?.id, "2");
+  assert.deepEqual(morning.followUps.map((f) => f.date), ["2026-11-20"]);
+  const evening = todayView(s, "2026-11-17", "21:52");
+  assert.equal(evening.pickup, undefined);
+  assert.deepEqual(evening.followUps.map((f) => f.date), ["2026-11-20"]);
+});

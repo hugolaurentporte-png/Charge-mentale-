@@ -127,8 +127,8 @@ async function api(user, path, init = {}) {
   ok("À l’ouverture, chacun voit l’heure et le responsable du jour (« Tu » / prénom)");
 
   // Vendredi à couvrir : dans les suivis de Hugo (organisateur), pas de Camille
-  await see(h, "vendredi 20 nov. reste à couvrir");
-  await notSee(c, "reste à couvrir");
+  await see(h, "Vendredi 20 nov. · ");
+  await notSee(c, "Tu organises la crèche");
   ok("Les jours non couverts remontent dans les suivis de l’organisateur uniquement");
 
   // Camille prend jeudi depuis la vue Semaine
@@ -142,8 +142,8 @@ async function api(user, path, init = {}) {
 
   // Vendredi reste à couvrir chez Hugo, quel que soit le parent qui fera le trajet
   await h.getByRole("radio", { name: "Aujourd’hui" }).click();
-  await see(h, "vendredi 20 nov. reste à couvrir");
-  await notSee(h, "jeudi 19 nov. reste à couvrir");
+  await see(h, "Vendredi 20 nov. · ");
+  await notSee(h, "Jeudi 19 nov. · ");
   await shot(h, "03-suivis-creche-hugo");
   ok("Vendredi reste dans les suivis de Hugo après la répartition des trajets");
 
@@ -375,6 +375,18 @@ async function api(user, path, init = {}) {
   await h.waitForFunction(() => document.querySelectorAll('input[aria-label="Terminer Kiné"]').length === 2, null, { timeout: 8000 });
   await shot(h, "12-recurrence-note");
   ok("Petit mot et répétition : une fois « Kiné » terminée, la séance de la semaine suivante est créée");
+
+  // Changer l'heure de la récupération du jour depuis la carte
+  await tab(h, "Planning");
+  await h.getByRole("radio", { name: "Aujourd’hui" }).click();
+  await h.getByRole("button", { name: "Modifier" }).first().click();
+  await h.getByLabel("Heure", { exact: true }).fill("18:10");
+  await h.getByRole("button", { name: "Enregistrer" }).click();
+  await see(h, "18 h 10 · ");
+  await tab(c, "Planning");
+  await see(c, "18 h 10 · ");
+  await shot(h, "13-heure-modifiee");
+  ok("L’heure de la récupération du jour se modifie depuis la carte (18 h 10), visible chez les deux");
 
   await browser.close();
   console.log(`\n${steps.length} vérifications passées.`);

@@ -2,11 +2,11 @@
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { useReady } from "@/lib/store";
-import { formatDay, relativeDay, weekLabel } from "@/lib/dates";
+import { capitalize, formatDay, formatTime, relativeDay, weekLabel } from "@/lib/dates";
 import { type Decision, type FollowUp, topicState, uncoveredDays } from "@/lib/selectors";
 import type { Topic } from "@/lib/types";
 import { Avatar, Badge, Button, ORANGE } from "./ui";
-import { PickupCard } from "./pickup";
+import { PickupCard, usePickupActions } from "./pickup";
 
 export function topicTitle(t: Topic) {
   return t.kind === "pickup_week" && t.week_start ? `${t.title} · semaine du ${weekLabel(t.week_start)}` : t.title;
@@ -80,17 +80,26 @@ export function TopicCard({ t }: { t: Topic }) {
 }
 
 export function FollowUpRow({ f }: { f: FollowUp }) {
-  const { today } = useReady();
+  const { s, today } = useReady();
+  const pa = usePickupActions();
   if (f.kind === "cover" && f.pickup) {
     return (
-      <div className="space-y-1">
-        <div className="px-1 text-sm font-semibold text-orange-700">
-          Tu organises la crèche · {formatDay(f.pickup.day)} reste à couvrir
+      <div className="rounded-2xl bg-white p-3 shadow-sm ring-1 ring-orange-200">
+        <div className="text-[15px] font-semibold">
+          {capitalize(formatDay(f.pickup.day))} · {formatTime(f.pickup.time)} : personne pour {s.couple.child_name}
         </div>
-        <PickupCard pickup={f.pickup} compact />
-        <Link href={`/planning/organiser?semaine=${f.topic.week_start}`} className="block px-1 text-sm font-semibold underline">
-          Organiser la semaine
-        </Link>
+        <div className="text-sm text-slate-500">Tu organises la crèche cette semaine</div>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <Button kind="orange" onClick={() => void pa.claim(f.pickup!)}>
+            Je {s.couple.child_pronoun} récupère
+          </Button>
+          <Button kind="secondary" onClick={() => void pa.noCreche(f.pickup!)}>
+            Pas de crèche
+          </Button>
+          <Link href={`/planning/organiser?semaine=${f.topic.week_start}`} className="px-1 text-sm font-semibold underline">
+            Organiser
+          </Link>
+        </div>
       </div>
     );
   }

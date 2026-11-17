@@ -101,11 +101,20 @@ export interface TodayView {
   tomorrowToOrganize?: Pickup;
 }
 
-export function todayView(s: Snapshot, today: string): TodayView {
+/**
+ * Accueil. `nowTime` (« HH:MM ») masque la récupération du jour restée sans
+ * responsable une fois l'heure passée : il n'y a plus rien à décider.
+ */
+export function todayView(s: Snapshot, today: string, nowTime?: string): TodayView {
   const mine = visibleTasks(s).filter((t) => !t.done && isMyTask(t, s.me));
   const tomorrow = pickupOn(s, addDays(today, 1));
+  let pickup = pickupOn(s, today);
+  if (pickup && !pickup.responsible_id && nowTime && nowTime > pickup.time.slice(0, 5)) pickup = undefined;
+  const tomorrowToOrganize = tomorrow && tomorrow.responsible_id === null ? tomorrow : undefined;
+  // Les jours déjà affichés en carte (aujourd'hui, demain) ne sont pas répétés dans les suivis.
+  const shown = new Set([today, ...(tomorrowToOrganize ? [tomorrowToOrganize.day] : [])]);
   return {
-    pickup: pickupOn(s, today),
+    pickup,
     appointments: appointmentsOn(s, today),
     tasks: mine
       .filter((t) => t.due_date === today)
@@ -113,9 +122,9 @@ export function todayView(s: Snapshot, today: string): TodayView {
     overdue: mine
       .filter((t) => t.due_date !== null && t.due_date < today)
       .sort((a, b) => (a.due_date ?? "").localeCompare(b.due_date ?? "")),
-    followUps: myFollowUps(s, today),
+    followUps: myFollowUps(s, today).filter((f) => !(f.kind === "cover" && shown.has(f.date))),
     decisions: myDecisions(s),
-    tomorrowToOrganize: tomorrow && tomorrow.responsible_id === null ? tomorrow : undefined,
+    tomorrowToOrganize,
   };
 }
 

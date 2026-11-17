@@ -13,6 +13,11 @@ export function todayIn(tz: string = DEFAULT_TZ, now: Date = new Date()): string
   }).format(now);
 }
 
+/** Heure locale « HH:MM » dans le fuseau du couple. */
+export function nowTimeIn(tz: string = DEFAULT_TZ, now: Date = new Date()): string {
+  return new Intl.DateTimeFormat("fr-FR", { timeZone: tz, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(now);
+}
+
 function toUTC(iso: string): Date {
   return new Date(`${iso}T00:00:00Z`);
 }
