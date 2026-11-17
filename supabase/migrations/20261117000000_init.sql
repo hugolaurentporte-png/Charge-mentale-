@@ -714,3 +714,10 @@ alter publication supabase_realtime add table
   public.couples, public.profiles, public.couple_members, public.topics,
   public.pickups, public.relay_requests, public.tasks, public.appointments,
   public.lists, public.list_items;
+
+-- Fonctions de trigger : search_path figé (recommandation du linter Supabase).
+alter function public.tasks_done_at() set search_path = public;
+alter function public.members_only_guard() set search_path = public;
+alter function public.topics_guard() set search_path = public;
+alter function public.topics_insert_guard() set search_path = public;
+alter function public.immutable_privacy_guard() set search_path = public;
