@@ -4,6 +4,9 @@ import type { RealtimeChannel } from "@supabase/supabase-js";
 import { errorMessage, supabase } from "./supabase";
 import { todayIn } from "./dates";
 import type { Profile, Snapshot, UUID } from "./types";
+import { flush, isNetworkError } from "./outbox";
+
+const CACHE_KEY = "a-deux-snapshot";
 
 type Status = "loading" | "signedOut" | "noCouple" | "ready" | "error";
 
@@ -67,7 +70,9 @@ async function fetchSnapshot(me: UUID, coupleId: UUID): Promise<Snapshot> {
     pickups: creche ? (pickups.data ?? []) : [],
     relays: creche ? (relays.data ?? []) : [],
     topics: (topics.data ?? []).filter((t: { kind: string }) => creche || t.kind !== "pickup_week"),
-    tasks: tasks.data ?? [],
+    // Les éléments « à trier » restent hors du planning et des listes de tâches.
+    tasks: (tasks.data ?? []).filter((t: { inbox?: boolean }) => !t.inbox),
+    inbox: (tasks.data ?? []).filter((t: { inbox?: boolean; owner_id: UUID }) => t.inbox && t.owner_id === me),
     appointments: appts.data ?? [],
     lists: lists.data ?? [],
     items: items.data ?? [],
@@ -103,8 +108,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const reload = useCallback(async () => {
     try {
       const db = supabase();
-      const { data: auth } = await db.auth.getUser();
+      const { data: auth, error: authErr } = await db.auth.getUser();
+      if (authErr && isNetworkError(authErr)) throw authErr;
       if (!auth.user) {
+        try {
+          localStorage.removeItem(CACHE_KEY);
+        } catch {
+          /* rien à effacer */
+        }
         setStatus("signedOut");
         setS(null);
         return;
@@ -121,10 +132,29 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       coupleRef.current = m.couple_id;
       const snap = await fetchSnapshot(auth.user.id, m.couple_id);
       setS(snap);
+      try {
+        localStorage.setItem(CACHE_KEY, JSON.stringify(snap));
+      } catch {
+        /* pas de copie locale */
+      }
       setToday(todayIn(snap.couple.timezone));
       setStatus("ready");
       setError(null);
     } catch (e) {
+      // Sans réseau : dernière copie connue, pour consulter et noter quand même.
+      if (isNetworkError(e)) {
+        try {
+          const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || "null") as Snapshot | null;
+          if (cached) {
+            setS((cur) => cur ?? cached);
+            setStatus("ready");
+            setError("Hors connexion");
+            return;
+          }
+        } catch {
+          /* pas de copie */
+        }
+      }
       setError(errorMessage(e));
       setStatus((st) => (st === "ready" ? st : "error"));
     }
@@ -137,17 +167,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // Chargement initial, changements de session, retour au premier plan.
   useEffect(() => {
+    // Saisies faites hors connexion : envoyées dès que possible.
+    const sync = () => void flush().then((n) => (n ? reload() : undefined));
+    sync();
+    window.addEventListener("online", sync);
     void reload();
     const { data: sub } = supabase().auth.onAuthStateChange((evt) => {
       if (evt === "SIGNED_IN" || evt === "SIGNED_OUT" || evt === "USER_UPDATED") scheduleReload();
     });
     const onVisible = () => {
-      if (document.visibilityState === "visible") scheduleReload();
+      if (document.visibilityState === "visible") {
+        sync();
+        scheduleReload();
+      }
     };
     document.addEventListener("visibilitychange", onVisible);
     return () => {
       sub.subscription.unsubscribe();
       document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("online", sync);
     };
   }, [reload, scheduleReload]);
 
@@ -213,7 +251,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const visible = useMemo(
     () =>
       s && hidden.size
-        ? { ...s, tasks: s.tasks.filter((t) => !hidden.has(t.id)), items: s.items.filter((i) => !hidden.has(i.id)) }
+        ? {
+            ...s,
+            tasks: s.tasks.filter((t) => !hidden.has(t.id)),
+            items: s.items.filter((i) => !hidden.has(i.id)),
+            inbox: s.inbox?.filter((t) => !hidden.has(t.id)),
+          }
         : s,
     [s, hidden],
   );

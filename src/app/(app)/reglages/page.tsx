@@ -148,6 +148,24 @@ export default function ReglagesPage() {
             <span className="block text-sm text-slate-500">Ce qui t’attend demain : crèche, rendez-vous, tâches.</span>
           </span>
         </label>
+        <label className="mt-3 flex items-center gap-3 text-[15px]">
+          <input
+            type="checkbox"
+            className="h-5 w-5"
+            checked={me?.inbox_reminder !== false}
+            disabled={me?.evening_summary === false}
+            onChange={(e) =>
+              void run(
+                () => supabase().from("profiles").update({ inbox_reminder: e.target.checked }).eq("id", s.me),
+                e.target.checked ? "Rappel de tri activé" : "Rappel de tri désactivé",
+              )
+            }
+          />
+          <span>
+            Rappel « À trier » dans ce résumé
+            <span className="block text-sm text-slate-500">Une ligne en plus, jamais une notification de plus.</span>
+          </span>
+        </label>
       </Section>
 
       <Section title="Apparence">

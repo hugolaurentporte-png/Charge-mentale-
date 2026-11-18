@@ -34,8 +34,11 @@ async function notSee(page, text) {
   assert.equal(await page.getByText(text, { exact: false }).count(), 0, `« ${text} » ne devrait pas être visible`);
 }
 const tab = (page, name) => page.getByRole("link", { name, exact: true }).click();
-async function fab(page) {
+async function fab(page, quick = false) {
   await page.getByRole("button", { name: "Ajouter", exact: true }).click();
+  // Le + s'ouvre sur « Vite » : les parcours classiques passent à l'onglet Tâche.
+  const vite = page.getByRole("radio", { name: "Vite" });
+  if (!quick && (await vite.count())) await page.getByRole("radio", { name: /^Tâche/ }).first().click();
 }
 
 async function api(user, path, init = {}) {
@@ -448,6 +451,42 @@ async function api(user, path, init = {}) {
   await h.waitForFunction(() => !document.body.innerText.includes("Réserver le gîte"), null, { timeout: 8000 });
   await shot(c, "17-je-men-occupe");
   ok("Tâche à deux : « Je m’en occupe » la donne à Camille ; elle quitte les tâches de Hugo sans recharger");
+
+  // Vider ma tête : catégorie proposée, date floue à confirmer, doublon, boîte « À trier » privée
+  await tab(h, "Planning");
+  await fab(h, true);
+  await h.getByLabel("Pensée").fill("Rappeler la mutuelle la semaine prochaine");
+  await see(h, "Catégorie (proposée)");
+  assert.equal(await h.getByRole("radio", { name: /Administratif/ }).getAttribute("aria-checked"), "true");
+  await h.getByRole("button", { name: "Oui, cette date" }).click();
+  await h.getByRole("button", { name: "Noter" }).click();
+  await see(h, "Rappeler la mutuelle → À trier");
+  await h.getByLabel("Pensée").fill("rappeler la mutuelle");
+  await see(h, "Déjà présent dans À trier");
+  await h.getByRole("button", { name: "Fusionner" }).click();
+  await h.getByLabel("Pensée").fill("Acheter du lait");
+  assert.equal(await h.getByRole("radio", { name: "Courses", exact: true }).getAttribute("aria-checked"), "true");
+  await h.getByRole("button", { name: "Noter" }).click();
+  await see(h, "Lait → Courses");
+  await shot(h, "18-vider-ma-tete");
+  await h.getByRole("button", { name: "Terminé" }).click();
+  await tab(h, "Pour moi");
+  await see(h, "À trier (1)");
+  await see(h, "Rappeler la mutuelle");
+  await c.reload();
+  await tab(c, "Pour moi");
+  await notSee(c, "Rappeler la mutuelle");
+  // Tri : Hugo la confie à Camille, elle devient partagée
+  await h.getByRole("button", { name: "Trier" }).click();
+  await h.getByRole("radiogroup", { name: "Pour qui" }).getByRole("radio", { name: "Camille" }).click();
+  await h.getByRole("button", { name: "En faire une tâche" }).click();
+  await see(h, "Rien à trier");
+  await tab(c, "Planning");
+  await c.getByRole("radio", { name: "Semaine" }).click();
+  await c.getByRole("button", { name: "Semaine suivante" }).click();
+  await see(c, "Rappeler la mutuelle");
+  await shot(c, "19-trie-et-partage");
+  ok("Vider ma tête : catégorie proposée, date floue confirmée, doublons, « À trier » privé puis trié et partagé");
 
   await browser.close();
   console.log(`\n${steps.length} vérifications passées.`);

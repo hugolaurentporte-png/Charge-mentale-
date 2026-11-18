@@ -6,6 +6,7 @@ import { Header, useFab } from "@/components/shell";
 import { Badge, Empty, Section } from "@/components/ui";
 import { TaskRow } from "@/components/tasks";
 import { ListLink, NewListForm } from "@/components/lists";
+import { InboxSection } from "@/components/capture";
 
 export default function MoiPage() {
   const { s, run, today } = useReady();
@@ -19,6 +20,7 @@ export default function MoiPage() {
     <>
       <Header title="Pour moi" />
       <p className="px-1 text-sm text-slate-500">Tout ce qui est ici n’est visible que par toi.</p>
+      <InboxSection />
       <Section title="Mes tâches">
         {tasks.length ? tasks.map((t) => <TaskRow key={t.id} task={t} showDate />) : <Empty>Aucune tâche perso.</Empty>}
       </Section>

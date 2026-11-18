@@ -7,6 +7,7 @@ import { supabase, errorMessage } from "@/lib/supabase";
 import type { UUID } from "@/lib/types";
 import { BASE } from "@/lib/base";
 import { AppointmentForm, GiftForm, GoalForm, ItemForm, TaskForm, TopicForm } from "./forms";
+import { QuickCapture } from "./capture";
 import { Avatar, Button, Input, Label, Segmented, Sheet } from "./ui";
 
 /** Contexte du bouton + : chaque écran indique ce qu'il faut préremplir. */
@@ -33,7 +34,7 @@ function QuickAdd({ ctx, onClose }: { ctx: FabContext; onClose: () => void }) {
   const { s } = useReady();
   const router = useRouter();
   const [kind, setKind] = useState<string>(
-    ctx.mode === "moi" ? "task" : ctx.mode === "lists" ? "topic" : ctx.mode === "topic" ? "task" : "task",
+    ctx.mode === "lists" ? "topic" : ctx.mode === "planning" || ctx.mode === "moi" ? "quick" : "task",
   );
   let title = "Ajouter";
   let body: React.ReactNode = null;
@@ -46,12 +47,14 @@ function QuickAdd({ ctx, onClose }: { ctx: FabContext; onClose: () => void }) {
             value={kind}
             onChange={setKind}
             options={[
+              { value: "quick", label: "Vite" },
               { value: "task", label: "Tâche" },
               { value: "topic", label: "Sujet" },
-              { value: "appt", label: "Rendez-vous" },
+              { value: "appt", label: "RDV" },
             ]}
           />
         </div>
+        {kind === "quick" && <QuickCapture onDone={onClose} />}
         {kind === "task" && <TaskForm day={ctx.day} onDone={onClose} />}
         {kind === "topic" && <TopicForm onDone={onClose} />}
         {kind === "appt" && <AppointmentForm day={ctx.day} onDone={onClose} />}
@@ -89,11 +92,13 @@ function QuickAdd({ ctx, onClose }: { ctx: FabContext; onClose: () => void }) {
             value={kind}
             onChange={setKind}
             options={[
+              { value: "quick", label: "Vite" },
               { value: "task", label: "Tâche perso" },
               { value: "goal", label: "Objectif" },
             ]}
           />
         </div>
+        {kind === "quick" && <QuickCapture onDone={onClose} />}
         {kind === "task" && <TaskForm isPrivate onDone={onClose} />}
         {kind === "goal" && <GoalForm onDone={onClose} />}
       </>
@@ -229,6 +234,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <FabCtx.Provider value={{ ctx, set: setCtx }}>
+      {error === "Hors connexion" && (
+        <div className="sticky top-0 z-40 bg-amber-100 px-4 py-1.5 text-center text-sm font-semibold text-amber-900">
+          Hors connexion : tes saisies partiront au retour du réseau
+        </div>
+      )}
       <main className="mx-auto min-h-dvh max-w-md overflow-x-clip px-4 pb-32">{children}</main>
       {ctx && (
         <button

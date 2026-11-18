@@ -168,5 +168,44 @@ do $$ declare b jsonb; begin
   assert b->>'body' like '%te confie « Appeler le plombier »%', 'tâche confiée';
   assert (select count(*) from net.calls) = 2, 'pas de notification pour un autre changement';
 end $$;
+
+-- Vider ma tête : un élément « à trier » est privé, compté dans le résumé, puis trié et partagé.
+set role authenticated;
+select pg_temp.login(:hugo);
+insert into public.tasks (couple_id, title, is_private, inbox, category)
+  select couple_id, 'Appeler la mutuelle', true, true, 'administratif' from public.couple_members limit 1;
+do $$ begin
+  begin
+    insert into public.tasks (couple_id, title, is_private, inbox)
+      select couple_id, 'Partagé à trier', false, true from public.couple_members limit 1;
+    raise exception 'ECHEC à trier partagé accepté';
+  exception when others then if sqlerrm like 'ECHEC%' then raise; end if; end;
+end $$;
+select pg_temp.login(:camille);
+do $$ begin
+  assert (select count(*) from public.tasks where title = 'Appeler la mutuelle') = 0, 'invisible pour l''autre';
+end $$;
+reset role;
+do $$ begin
+  assert public.evening_summary_text('aaaaaaaa-0000-0000-0000-000000000001', (now() at time zone 'Europe/Paris')::date + 1)
+    like '%À trier : 1 élément%', 'rappel de tri dans le résumé';
+end $$;
+set role authenticated;
+select pg_temp.login(:hugo);
+update public.tasks set inbox = false, is_private = false, assignee_id = :camille::uuid where title = 'Appeler la mutuelle';
+do $$ begin
+  begin
+    update public.tasks set inbox = true, is_private = true, assignee_id = null where title = 'Appeler la mutuelle';
+    raise exception 'ECHEC retour à trier accepté';
+  exception when others then if sqlerrm like 'ECHEC%' then raise; end if; end;
+  begin
+    update public.tasks set is_private = true where title = 'Rendre les livres !';
+    raise exception 'ECHEC visibilité modifiée';
+  exception when others then if sqlerrm like 'ECHEC%' then raise; end if; end;
+end $$;
+select pg_temp.login(:camille);
+do $$ begin
+  assert (select assignee_id from public.tasks where title = 'Appeler la mutuelle') = 'bbbbbbbb-0000-0000-0000-000000000002', 'triée et visible chez Camille';
+end $$;
 reset role;
 select 'TOUS LES TESTS RETRAIT / ANNULER SONT PASSÉS' as resultat;

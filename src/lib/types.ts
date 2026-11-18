@@ -16,6 +16,7 @@ export interface Couple {
 
 export interface Profile {
   evening_summary?: boolean;
+  inbox_reminder?: boolean;
   id: UUID;
   display_name: string;
   color: string;
@@ -74,6 +75,10 @@ export interface Task {
   owner_id: UUID;
   topic_id: UUID | null;
   created_at: string;
+  /** « Vider ma tête » : élément privé pas encore trié. */
+  inbox?: boolean;
+  category?: string | null;
+  snoozed_until?: string | null;
 }
 
 export interface Appointment {
@@ -135,6 +140,8 @@ export interface Snapshot {
   favorites: UUID[];
   goals: Goal[];
   reactions: TaskReaction[];
+  /** Éléments « à trier » (privés, hors planning). */
+  inbox?: Task[];
 }
 
 export interface TaskReaction {
