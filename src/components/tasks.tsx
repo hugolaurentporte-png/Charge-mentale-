@@ -9,7 +9,7 @@ import { AppointmentForm, idToWho, recurrenceLabel, TimeAndRepeat, useWhoOptions
 import { audienceStyle, Badge, Button, Input, Label, Person, Segmented, Sheet, Textarea, useAudienceColor, useOptimistic } from "./ui";
 
 function origin(t: Task, topicTitle?: string) {
-  if (t.is_private) return <Badge tone="violet">Juste moi</Badge>;
+  if (t.is_private) return <Badge tone="violet">Privé 🔒</Badge>;
   if (topicTitle) return <Badge>{topicTitle}</Badge>;
   return null;
 }
@@ -164,8 +164,11 @@ export function TaskSheet({ task, onClose }: { task: Task; onClose: () => void }
   const [repeat, setRepeat] = useState<RecurrenceChoice>(task.recurrence ?? "");
   const [note, setNote] = useState(task.note ?? "");
   const [appt, setAppt] = useState(false);
+  const [priv, setPriv] = useState(task.is_private);
   const opts = useWhoOptions();
   const topic = s.topics.find((t) => t.id === task.topic_id);
+  // Seul l'auteur choisit qui voit la tâche (hors tâche rattachée à un sujet).
+  const canChangeVisibility = task.owner_id === s.me && !task.topic_id;
   const save = async () => {
     const ok = await run(() =>
       supabase()
@@ -176,7 +179,8 @@ export function TaskSheet({ task, onClose }: { task: Task; onClose: () => void }
           due_time: date && time ? time : null,
           recurrence: date && repeat ? repeat : null,
           note: note.trim() || null,
-          assignee_id: task.is_private ? task.owner_id : whoToId(who, s.me, partner?.id),
+          assignee_id: priv ? task.owner_id : whoToId(who, s.me, partner?.id),
+          ...(priv !== task.is_private ? { is_private: priv } : {}),
         })
         .eq("id", task.id),
     );
@@ -200,7 +204,24 @@ export function TaskSheet({ task, onClose }: { task: Task; onClose: () => void }
           <Label>Titre</Label>
           <Input value={title} onChange={(e) => setTitle(e.target.value)} />
         </label>
-        {!task.is_private && (
+        {canChangeVisibility && (
+          <div>
+            <Label>Visible par</Label>
+            <Segmented
+              name="Visibilité"
+              value={priv ? "me" : "both"}
+              onChange={(v) => setPriv(v === "me")}
+              options={[
+                { value: "both", label: "Nous deux" },
+                { value: "me", label: "Privé 🔒" },
+              ]}
+            />
+            {priv && !task.is_private && partner && (
+              <p className="mt-1 text-xs text-violet-700">{partner.display_name} ne la verra plus.</p>
+            )}
+          </div>
+        )}
+        {!priv && (
           <div>
             <Label>Qui s’en charge ?</Label>
             <Segmented name="Responsable" value={who} onChange={setWho} options={opts} />

@@ -42,7 +42,7 @@ export function AudienceLegend() {
   const { s, partner } = useApp();
   const me = s?.profiles.find((p) => p.id === s.me);
   const items = [
-    { label: "Juste moi", color: PRIVATE_VIOLET },
+    { label: "Privé 🔒", color: PRIVATE_VIOLET },
     { label: "Toi", color: me?.color ?? "#4f46e5" },
     ...(partner ? [{ label: partner.display_name, color: partner.color }] : []),
     { label: "À deux", color: BOTH_COLOR },

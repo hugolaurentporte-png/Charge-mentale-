@@ -288,7 +288,7 @@ function SortSheet({ task, onClose }: { task: Task; onClose: () => void }) {
     onClose();
   };
   const opts: { value: SortWho; label: string }[] = [
-    { value: "private", label: "Juste moi" },
+    { value: "private", label: "Privé 🔒" },
     { value: "me", label: "Moi" },
     ...(partner ? [{ value: "partner" as SortWho, label: partner.display_name }] : []),
     { value: "both", label: "À deux" },

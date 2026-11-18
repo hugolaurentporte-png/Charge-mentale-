@@ -36,22 +36,31 @@ export function TopicStateBadge({ t }: { t: Topic }) {
   const { who } = useReady();
   const st = topicState(t);
   if (st === "closed") return <Badge tone="green">Réglé</Badge>;
-  if (t.is_private) return <Badge tone="violet">Juste moi</Badge>;
+  if (t.is_private) return <Badge tone="violet">Privé 🔒</Badge>;
   if (st === "open_unowned") return <Badge tone="orange">À prendre en charge</Badge>;
   return <Badge>Suivi par {who(t.owner_id)}</Badge>;
 }
 
 /** Carte de la vue partagée : qui s'occupe, état, prochaine étape. */
 export function TopicCard({ t }: { t: Topic }) {
-  const { s, today, who } = useReady();
+  const { s, today, who, deferDelete } = useReady();
+  const remove = () =>
+    deferDelete(t.id, `« ${topicTitle(t)} » supprimé`, () => supabase().from("topics").delete().eq("id", t.id));
   const a = useTopicActions();
   const cover = uncoveredDays(s, t, today);
   const unowned = !t.owner_id && t.status === "open";
   return (
     <div
-      className={`rounded-2xl p-4 shadow-sm ring-1 ${t.is_private ? "bg-violet-50 ring-violet-200" : "bg-white ring-slate-200"}`}
+      className={`relative rounded-2xl p-4 pr-11 shadow-sm ring-1 ${t.is_private ? "bg-violet-50 ring-violet-200" : "bg-white ring-slate-200"}`}
       style={{ borderLeft: `6px solid ${t.is_private ? PRIVATE_COLOR : (s.profiles.find((p) => p.id === t.owner_id)?.color ?? ORANGE)}` }}
     >
+      <button
+        aria-label={`Supprimer ${topicTitle(t)}`}
+        onClick={remove}
+        className="absolute right-1 top-1 flex h-10 w-10 items-center justify-center text-xl text-slate-400"
+      >
+        ×
+      </button>
       <Link href={`/sujets/voir?id=${t.id}`} className="block">
         <div className="flex items-center gap-3">
           <Avatar id={t.owner_id} size={32} />

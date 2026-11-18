@@ -256,6 +256,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             tasks: s.tasks.filter((t) => !hidden.has(t.id)),
             items: s.items.filter((i) => !hidden.has(i.id)),
             inbox: s.inbox?.filter((t) => !hidden.has(t.id)),
+            topics: s.topics.filter((t) => !hidden.has(t.id)),
           }
         : s,
     [s, hidden],

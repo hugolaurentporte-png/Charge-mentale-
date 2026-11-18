@@ -223,7 +223,7 @@ export function TaskForm({
             onChange={(v) => setPriv(v === "me")}
             options={[
               { value: "both", label: "Nous deux" },
-              { value: "me", label: "Juste moi" },
+              { value: "me", label: "Privé 🔒" },
             ]}
           />
           {priv && <p className="mt-1 text-sm text-slate-500">Rangée dans « Pour moi », invisible pour l’autre.</p>}
@@ -326,7 +326,7 @@ export function TopicForm({ onDone }: { onDone: (id?: UUID) => void }) {
           onChange={(v) => setPriv(v === "me")}
           options={[
             { value: "both", label: "Nous deux" },
-            { value: "me", label: "Juste moi" },
+            { value: "me", label: "Privé 🔒" },
           ]}
         />
       </div>

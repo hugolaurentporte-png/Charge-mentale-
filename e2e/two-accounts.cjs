@@ -431,7 +431,7 @@ async function api(user, path, init = {}) {
   await h.getByRole("button", { name: "Ajouter", exact: true }).last().click();
   await see(h, "Réserver le gîte");
   await fab(h);
-  await h.getByRole("radio", { name: "Juste moi" }).click();
+  await h.getByRole("radio", { name: "Privé 🔒" }).click();
   await h.getByLabel("Titre", { exact: true }).fill("Cadeau secret");
   await h.getByRole("button", { name: "Ajouter", exact: true }).last().click();
   await see(h, "Cadeau secret");
@@ -487,6 +487,21 @@ async function api(user, path, init = {}) {
   await see(c, "Rappeler la mutuelle");
   await shot(c, "19-trie-et-partage");
   ok("Vider ma tête : catégorie proposée, date floue confirmée, doublons, « À trier » privé puis trié et partagé");
+
+  // Supprimer un sujet depuis sa carte, avec « Annuler »
+  await tab(h, "Listes");
+  const delBtn = h.getByRole("button", { name: "Supprimer Vacances de février" });
+  await delBtn.click();
+  await h.waitForTimeout(300);
+  assert.equal(await delBtn.count(), 0);
+  await h.getByRole("button", { name: "Annuler" }).click();
+  await delBtn.waitFor({ state: "visible", timeout: 4000 });
+  await h.getByRole("button", { name: "Supprimer Vacances de février" }).click();
+  await h.waitForTimeout(6000);
+  await tab(c, "Listes");
+  await c.reload();
+  await notSee(c, "Vacances de février");
+  ok("Un sujet se supprime depuis sa carte, avec « Annuler » pendant 5 s");
 
   await browser.close();
   console.log(`\n${steps.length} vérifications passées.`);

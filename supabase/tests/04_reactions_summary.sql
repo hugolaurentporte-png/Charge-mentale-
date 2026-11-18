@@ -207,5 +207,39 @@ select pg_temp.login(:camille);
 do $$ begin
   assert (select assignee_id from public.tasks where title = 'Appeler la mutuelle') = 'bbbbbbbb-0000-0000-0000-000000000002', 'triée et visible chez Camille';
 end $$;
+
+-- Visibilité modifiable par l'auteur seulement.
+set role authenticated;
+select pg_temp.login(:hugo);
+insert into public.tasks (couple_id, title) select couple_id, 'Visite EHPAD' from public.couple_members limit 1;
+select pg_temp.login(:camille);
+do $$ begin
+  begin
+    update public.tasks set is_private = true, assignee_id = null where title = 'Visite EHPAD';
+    raise exception 'ECHEC visibilité changée par l''autre';
+  exception when others then if sqlerrm like 'ECHEC%' then raise; end if; end;
+end $$;
+select pg_temp.login(:hugo);
+update public.tasks set is_private = true, assignee_id = :hugo::uuid where title = 'Visite EHPAD';
+select pg_temp.login(:camille);
+do $$ begin
+  assert (select count(*) from public.tasks where title = 'Visite EHPAD') = 0, 'devenue privée';
+end $$;
+select pg_temp.login(:hugo);
+update public.tasks set is_private = false where title = 'Visite EHPAD';
+select pg_temp.login(:camille);
+do $$ begin
+  assert (select count(*) from public.tasks where title = 'Visite EHPAD') = 1, 'repartagée';
+end $$;
+
+-- Un sujet crèche de la semaine peut être supprimé ; les récupérations restent.
+set role authenticated;
+select pg_temp.login(:hugo);
+select public.save_pickups('[{"day":"2030-02-04","time":"17:30","who":"me"}]'::jsonb, '2030-02-04');
+delete from public.topics where kind = 'pickup_week' and week_start = '2030-02-04';
+do $$ begin
+  assert (select count(*) from public.topics where kind = 'pickup_week' and week_start = '2030-02-04') = 0, 'sujet crèche supprimé';
+  assert (select count(*) from public.pickups where day = '2030-02-04') = 1, 'récupération conservée';
+end $$;
 reset role;
 select 'TOUS LES TESTS RETRAIT / ANNULER SONT PASSÉS' as resultat;
