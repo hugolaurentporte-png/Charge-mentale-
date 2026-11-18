@@ -142,5 +142,31 @@ do $$ begin
   end;
   assert (select start_time from public.pickups where day = '2030-01-07') = '08:30', 'début inchangé après refus';
 end $$;
+
+-- « Je m'en occupe » : Hugo prend une tâche à deux, Camille (abonnée) est prévenue ;
+-- puis Hugo lui confie une autre tâche.
+reset role;
+delete from net.calls;
+set role authenticated;
+select pg_temp.login(:camille);
+insert into public.tasks (couple_id, title) select couple_id, 'Rendre les livres' from public.couple_members limit 1;
+insert into public.tasks (couple_id, title) select couple_id, 'Appeler le plombier' from public.couple_members limit 1;
+select pg_temp.login(:hugo);
+reset role;
+delete from net.calls;
+set role authenticated;
+update public.tasks set assignee_id = :hugo::uuid where title = 'Rendre les livres' and assignee_id is null;
+update public.tasks set assignee_id = :camille::uuid where title = 'Appeler le plombier';
+update public.tasks set title = 'Rendre les livres !' where title = 'Rendre les livres';
+reset role;
+do $$ declare b jsonb; begin
+  select body into b from net.calls where body->>'title' = 'Tâche prise';
+  assert b is not null, 'notification « Tâche prise »';
+  assert b->'user_ids' = to_jsonb(array['bbbbbbbb-0000-0000-0000-000000000002'::uuid]), 'envoyée à Camille';
+  assert b->>'body' like '%s’occupe de « Rendre les livres »%', b->>'body';
+  select body into b from net.calls where body->>'title' = 'Tâche pour toi';
+  assert b->>'body' like '%te confie « Appeler le plombier »%', 'tâche confiée';
+  assert (select count(*) from net.calls) = 2, 'pas de notification pour un autre changement';
+end $$;
 reset role;
 select 'TOUS LES TESTS RETRAIT / ANNULER SONT PASSÉS' as resultat;

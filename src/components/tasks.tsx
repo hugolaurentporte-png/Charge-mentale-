@@ -72,6 +72,15 @@ function Reactions({ task }: { task: Task }) {
 export function TaskRow({ task, overdue = false, showDate = false }: { task: Task; overdue?: boolean; showDate?: boolean }) {
   const { s, run, today, toast } = useReady();
   const [open, setOpen] = useState(false);
+  // Tâche à deux sans responsable : un appui pour la prendre (l'autre est prévenu).
+  const claimable = !task.is_private && !task.done && !task.assignee_id;
+  const claim = async () => {
+    const rows = (await run(() =>
+      supabase().from("tasks").update({ assignee_id: s.me }).eq("id", task.id).is("assignee_id", null).select("id"),
+    )) as { id: string }[] | null;
+    if (rows && rows.length) toast(`Tu t’occupes de « ${task.title} »`);
+    else if (rows) toast("Quelqu’un s’en occupe déjà.");
+  };
   const [pick, setPick] = useState(false);
   const topic = s.topics.find((t) => t.id === task.topic_id);
   const [done, setLocalDone] = useOptimistic(task.done);
@@ -109,6 +118,11 @@ export function TaskRow({ task, overdue = false, showDate = false }: { task: Tas
           {task.note && <p className="mt-1 line-clamp-2 text-sm italic text-slate-600">« {task.note} »</p>}
         </button>
       </div>
+      {claimable && (
+        <Button kind="orange" className="mt-3 w-full !min-h-10" onClick={() => void claim()}>
+          Je m’en occupe
+        </Button>
+      )}
       {!task.is_private && <Reactions task={task} />}
       {overdue && (
         <div className="mt-3 flex gap-2">

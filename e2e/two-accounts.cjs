@@ -438,6 +438,17 @@ async function api(user, path, init = {}) {
   await notSee(c, "Cadeau secret");
   ok("Ajout depuis le planning : sujets à deux proposés, et « Juste moi » reste invisible pour l’autre");
 
+  // « Je m'en occupe » sur une tâche à deux : Camille la prend, Hugo voit son nom
+  await tab(c, "Planning");
+  await c.getByRole("radio", { name: "Aujourd’hui" }).click();
+  const rowC = c.locator("div.rounded-2xl", { hasText: "Réserver le gîte" }).last();
+  await rowC.getByRole("button", { name: "Je m’en occupe" }).click();
+  await see(c, "Tu t’occupes de « Réserver le gîte »");
+  // Chez Hugo, elle quitte « Mes tâches du jour » sans recharger.
+  await h.waitForFunction(() => !document.body.innerText.includes("Réserver le gîte"), null, { timeout: 8000 });
+  await shot(c, "17-je-men-occupe");
+  ok("Tâche à deux : « Je m’en occupe » la donne à Camille ; elle quitte les tâches de Hugo sans recharger");
+
   await browser.close();
   console.log(`\n${steps.length} vérifications passées.`);
 })().catch(async (err) => {
