@@ -18,15 +18,33 @@ function getRecognition(): (new () => Rec) | null {
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
 }
 
+/** iPhone / iPad : la dictée web y est peu fiable, on passe par celle du clavier. */
+function isIOS(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+}
+
 /** Bouton micro : dicte une phrase en français et la renvoie. */
 export function VoiceButton({ onText }: { onText: (text: string) => void }) {
   const [supported, setSupported] = useState(false);
+  const [ios, setIos] = useState(false);
   const [listening, setListening] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const rec = useRef<Rec | null>(null);
-  useEffect(() => setSupported(getRecognition() !== null), []);
+  useEffect(() => {
+    setIos(isIOS());
+    setSupported(isIOS() || getRecognition() !== null);
+  }, []);
   if (!supported) return null;
-  const toggle = () => {
+  const toggle = (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (ios) {
+      // Ouvre le clavier sur le champ voisin : le micro du clavier fait la dictée.
+      const field = e.currentTarget.closest("div")?.parentElement?.querySelector<HTMLInputElement | HTMLTextAreaElement>("input, textarea");
+      field?.focus();
+      setError("Touche le micro 🎤 du clavier pour dicter.");
+      setTimeout(() => setError(null), 4000);
+      return;
+    }
     if (listening) {
       rec.current?.stop();
       return;
@@ -42,7 +60,13 @@ export function VoiceButton({ onText }: { onText: (text: string) => void }) {
       if (t) onText(t);
     };
     r.onerror = (e) =>
-      setError(e.error === "not-allowed" ? "Micro refusé : autorise-le dans les réglages." : "Je n’ai pas compris, réessaie.");
+      setError(
+        e.error === "not-allowed"
+          ? "Micro refusé : autorise-le dans les réglages."
+          : e.error === "no-speech"
+            ? "Je n’ai rien entendu, réessaie."
+            : "Je n’ai pas compris, réessaie.",
+      );
     r.onend = () => setListening(false);
     rec.current = r;
     setError(null);
@@ -50,7 +74,7 @@ export function VoiceButton({ onText }: { onText: (text: string) => void }) {
     r.start();
   };
   return (
-    <div className="shrink-0">
+    <div className="relative shrink-0">
       <button
         type="button"
         onClick={toggle}
@@ -64,7 +88,16 @@ export function VoiceButton({ onText }: { onText: (text: string) => void }) {
           <path d="M5 11a7 7 0 0 0 14 0M12 18v3" strokeLinecap="round" />
         </svg>
       </button>
-      {error && <p className="mt-1 w-40 text-xs text-red-700">{error}</p>}
+      {error && (
+        <p
+          role="status"
+          className={`absolute right-0 top-12 z-10 w-52 rounded-lg px-2 py-1 text-xs shadow ${
+            ios ? "bg-slate-900 text-white" : "bg-red-50 text-red-700"
+          }`}
+        >
+          {error}
+        </p>
+      )}
     </div>
   );
 }
