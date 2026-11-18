@@ -15,6 +15,49 @@ import { useApp } from "@/lib/store";
 import type { UUID } from "@/lib/types";
 
 export const ORANGE = "#ea580c";
+/** Couleurs « pour qui » : juste moi (violet), chaque personne (sa couleur), nous deux (orange). */
+export const PRIVATE_VIOLET = "#7c3aed";
+export const BOTH_COLOR = ORANGE;
+
+export function useAudienceColor() {
+  const { s } = useApp();
+  return (o: { isPrivate?: boolean; people: (UUID | null | undefined)[] }) => {
+    if (o.isPrivate) return PRIVATE_VIOLET;
+    const ids = [...new Set(o.people.filter(Boolean))] as UUID[];
+    if (ids.length === 1) return s?.profiles.find((p) => p.id === ids[0])?.color ?? BOTH_COLOR;
+    return BOTH_COLOR;
+  };
+}
+
+/** Fond teinté + liseré gauche de la couleur « pour qui ». */
+export function audienceStyle(color: string): React.CSSProperties {
+  return {
+    borderLeft: `6px solid ${color}`,
+    background: `color-mix(in srgb, ${color} 9%, var(--color-white))`,
+  };
+}
+
+/** Petite légende des couleurs. */
+export function AudienceLegend() {
+  const { s, partner } = useApp();
+  const me = s?.profiles.find((p) => p.id === s.me);
+  const items = [
+    { label: "Juste moi", color: PRIVATE_VIOLET },
+    { label: "Toi", color: me?.color ?? "#4f46e5" },
+    ...(partner ? [{ label: partner.display_name, color: partner.color }] : []),
+    { label: "À deux", color: BOTH_COLOR },
+  ];
+  return (
+    <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 px-1 text-xs text-slate-500" aria-label="Légende des couleurs">
+      {items.map((i) => (
+        <span key={i.label} className="inline-flex items-center gap-1">
+          <span className="h-2.5 w-2.5 rounded-full" style={{ background: i.color }} />
+          {i.label}
+        </span>
+      ))}
+    </div>
+  );
+}
 
 export function initials(name: string): string {
   return name

@@ -6,12 +6,12 @@ import { useReady } from "@/lib/store";
 import { addDays, formatTime, relativeDay } from "@/lib/dates";
 import type { Task } from "@/lib/types";
 import { AppointmentForm, idToWho, recurrenceLabel, TimeAndRepeat, useWhoOptions, whoToId, type RecurrenceChoice, type WhoChoice } from "./forms";
-import { Badge, Button, Input, Label, Person, Segmented, Sheet, Textarea, useOptimistic } from "./ui";
+import { audienceStyle, Badge, Button, Input, Label, Person, Segmented, Sheet, Textarea, useAudienceColor, useOptimistic } from "./ui";
 
 function origin(t: Task, topicTitle?: string) {
-  if (t.is_private) return <Badge tone="violet">Pour moi</Badge>;
+  if (t.is_private) return <Badge tone="violet">Juste moi</Badge>;
   if (topicTitle) return <Badge>{topicTitle}</Badge>;
-  return <Badge>À deux</Badge>;
+  return null;
 }
 
 const EMOJIS = ["👍", "😊", "❤️", "🙏", "💪", "🎉", "😅"];
@@ -72,6 +72,7 @@ function Reactions({ task }: { task: Task }) {
 export function TaskRow({ task, overdue = false, showDate = false }: { task: Task; overdue?: boolean; showDate?: boolean }) {
   const { s, run, today, toast } = useReady();
   const [open, setOpen] = useState(false);
+  const color = useAudienceColor()({ isPrivate: task.is_private, people: [task.assignee_id] });
   // Tâche à deux sans responsable : un appui pour la prendre (l'autre est prévenu).
   const claimable = !task.is_private && !task.done && !task.assignee_id;
   const claim = async () => {
@@ -92,7 +93,10 @@ export function TaskRow({ task, overdue = false, showDate = false }: { task: Tas
   };
   const move = (d: string) => run(() => supabase().from("tasks").update({ due_date: d }).eq("id", task.id));
   return (
-    <div className={`rounded-2xl bg-white p-3 shadow-sm ring-1 ${overdue ? "ring-red-200" : "ring-slate-200"}`}>
+    <div
+      className={`rounded-2xl bg-white p-3 shadow-sm ring-1 ${overdue ? "ring-red-200" : "ring-slate-200"}`}
+      style={audienceStyle(color)}
+    >
       <div className="flex items-start gap-3">
         <input
           type="checkbox"
@@ -105,7 +109,7 @@ export function TaskRow({ task, overdue = false, showDate = false }: { task: Tas
           <div className={`text-[16px] font-semibold ${task.done ? "text-slate-400 line-through" : ""}`}>{task.title}</div>
           <div className="mt-1 flex flex-wrap items-center gap-2 text-sm">
             {origin(task, topic?.title)}
-            {!task.is_private && <Person id={task.assignee_id} />}
+            {!task.is_private && <Person id={task.assignee_id} empty="À deux" />}
             {(showDate || overdue) && task.due_date && (
               <span className={overdue ? "font-semibold text-red-700" : "text-slate-500"}>
                 {overdue ? "En retard · " : ""}

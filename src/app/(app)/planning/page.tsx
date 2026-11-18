@@ -7,15 +7,16 @@ import { addDays, capitalize, dayName, formatTime, weekDays, weekLabel, weekStar
 import { appointmentsOn, pendingRelayFor, pickupOn, tasksOn, todayView } from "@/lib/selectors";
 import type { Appointment, Pickup } from "@/lib/types";
 import { Header, useFab } from "@/components/shell";
-import { Avatar, Badge, Button, Empty, ORANGE, Person, Section, Segmented } from "@/components/ui";
+import { AudienceLegend, audienceStyle, Avatar, Badge, Button, Empty, ORANGE, Person, Section, Segmented, useAudienceColor } from "@/components/ui";
 import { PickupCard, PickupEditSheet, usePickupActions } from "@/components/pickup";
 import { TaskRow } from "@/components/tasks";
 import { DecisionRow, FollowUpRow } from "@/components/topics";
 
 function ApptRow({ a }: { a: Appointment }) {
   const { who } = useReady();
+  const color = useAudienceColor()({ people: a.participants });
   return (
-    <div className="flex items-center gap-3 rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200">
+    <div className="flex items-center gap-3 rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200" style={audienceStyle(color)}>
       <div className="w-16 shrink-0 text-lg font-extrabold">{formatTime(a.time)}</div>
       <div className="min-w-0 flex-1">
         <div className="truncate text-[16px] font-semibold">{a.title}</div>
@@ -40,6 +41,7 @@ function Today() {
   return (
     <div>
       <p className="px-1 text-slate-500">{capitalize(dayName(today))}</p>
+      <AudienceLegend />
       {v.pickup ? (
         <div className="mt-2">
           <PickupCard pickup={v.pickup} />
@@ -126,6 +128,7 @@ function Week({ onToday }: { onToday: () => void }) {
   const [start, setStart] = useState(() => weekStart(today));
   const [selected, setSelected] = useState(today);
   const a = usePickupActions();
+  const colorOf = useAudienceColor();
   const [editing, setEditing] = useState<Pickup | null>(null);
   useFab({ mode: "planning", day: selected });
   return (
@@ -161,7 +164,8 @@ function Week({ onToday }: { onToday: () => void }) {
           </Button>
         )}
       </div>
-      <div className="mt-4 space-y-2">
+      <AudienceLegend />
+      <div className="mt-3 space-y-2">
         {weekDays(start).map((d) => {
           const p = pickupOn(s, d);
           const appts = appointmentsOn(s, d);
@@ -219,7 +223,7 @@ function Week({ onToday }: { onToday: () => void }) {
                 </div>
               )}
               {appts.map((x) => (
-                <div key={x.id} className="mt-2 flex items-center gap-2 px-2 text-sm">
+                <div key={x.id} className="mt-2 flex items-center gap-2 rounded-xl px-2 py-1.5 text-sm" style={audienceStyle(colorOf({ people: x.participants }))}>
                   <span className="w-14 font-bold">{formatTime(x.time)}</span>
                   <span className="flex-1 truncate">{x.title}</span>
                   <span className="flex -space-x-1">
