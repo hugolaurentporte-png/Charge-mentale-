@@ -103,3 +103,16 @@ export function nextWeekday(today: string, weekday: number): string {
   const delta = ((weekday - isoWeekday(today) + 7) % 7) || 7;
   return addDays(today, delta);
 }
+
+/** « 2026-11-20 » + « 09:00 » à l'heure locale du fuseau → instant ISO (UTC). */
+export function zonedToIso(date: string, time: string, tz: string = DEFAULT_TZ): string {
+  const [y, mo, d] = date.split("-").map(Number);
+  const [h, mi] = time.split(":").map(Number);
+  const guess = Date.UTC(y, mo - 1, d, h, mi);
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: tz, hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit",
+  }).formatToParts(new Date(guess));
+  const g = (k: string) => Number(parts.find((x) => x.type === k)?.value);
+  const asLocal = Date.UTC(g("year"), g("month") - 1, g("day"), g("hour"), g("minute"));
+  return new Date(guess - (asLocal - guess)).toISOString();
+}

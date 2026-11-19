@@ -15,7 +15,7 @@ function hhmm(iso: string, tz: string) {
 }
 
 export default function EchangesPage() {
-  const { s, today, who, run, deferDelete, partner } = useReady();
+  const { s, today, who, run, deferDelete, partner, reload } = useReady();
   const tz = s.couple.timezone;
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
@@ -26,15 +26,21 @@ export default function EchangesPage() {
   const me = s.profiles.find((p) => p.id === s.me);
   const last = messages[messages.length - 1];
 
-  // Lu : dès que la conversation est affichée avec un message de l'autre plus récent.
+  // Lu : dès que la conversation est affichée (et à chaque retour au premier plan)
+  // avec un message de l'autre plus récent. L'heure de lecture est fixée par le serveur.
+  const readAtMs = Date.parse(me?.messages_read_at ?? "") || 0;
+  const unseen = messages.some((m) => m.author_id !== s.me && Date.parse(m.created_at) > readAtMs);
   useEffect(() => {
     end.current?.scrollIntoView({ block: "end" });
-    const readAt = me?.messages_read_at ?? "";
-    const unseen = messages.some((m) => m.author_id !== s.me && m.created_at > readAt);
-    if (unseen && document.visibilityState === "visible") {
-      void supabase().from("profiles").update({ messages_read_at: new Date().toISOString() }).eq("id", s.me);
-    }
-  }, [last?.id, messages, me?.messages_read_at, s.me]);
+  }, [last?.id]);
+  useEffect(() => {
+    const markRead = () => {
+      if (document.visibilityState === "visible") void supabase().rpc("mark_messages_read").then(() => reload());
+    };
+    if (unseen) markRead();
+    document.addEventListener("visibilitychange", markRead);
+    return () => document.removeEventListener("visibilitychange", markRead);
+  }, [unseen, last?.id, reload]);
 
   const send = async (e: React.FormEvent) => {
     e.preventDefault();

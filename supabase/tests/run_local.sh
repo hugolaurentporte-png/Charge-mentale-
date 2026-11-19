@@ -5,6 +5,6 @@
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 db="$(./e2e/setup-db.sh)"
-for f in supabase/tests/01_scenarios.sql supabase/tests/02_push.sql supabase/tests/03_notes_recurrence_agenda.sql supabase/tests/04_reactions_summary.sql; do
+for f in supabase/tests/01_scenarios.sql supabase/tests/02_push.sql supabase/tests/03_notes_recurrence_agenda.sql supabase/tests/04_reactions_summary.sql supabase/tests/05_read_reminders.sql; do
   psql -U "${PGUSER:-postgres}" -v ON_ERROR_STOP=1 -q -d "${db}" -f "$f" 2>&1 | grep -E "TOUS|ERROR|ERREUR" || { echo "Échec : $f"; exit 1; }
 done

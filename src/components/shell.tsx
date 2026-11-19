@@ -124,8 +124,8 @@ const TABS = [
 function TabBar() {
   const path = usePathname();
   const { s } = useApp();
-  const readAt = s?.profiles.find((p) => p.id === s.me)?.messages_read_at ?? "";
-  const unread = (s?.messages ?? []).filter((m) => m.author_id !== s?.me && m.created_at > readAt).length;
+  const readAt = Date.parse(s?.profiles.find((p) => p.id === s.me)?.messages_read_at ?? "") || 0;
+  const unread = (s?.messages ?? []).filter((m) => m.author_id !== s?.me && Date.parse(m.created_at) > readAt).length;
   return (
     <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
       <div className="mx-auto flex max-w-md">
