@@ -1,0 +1,188 @@
+"use client";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
+import { useReady } from "@/lib/store";
+import { BASE } from "@/lib/base";
+import { Button, Input, Label, Section, Segmented } from "@/components/ui";
+import { PushSettings } from "@/components/push";
+import { AgendaSettings } from "@/components/agenda";
+import { AppearanceSettings } from "@/components/appearance";
+
+export default function ReglagesPage() {
+  const { s, run, partner, toast } = useReady();
+  const router = useRouter();
+  const me = s.profiles.find((p) => p.id === s.me);
+  const [name, setName] = useState(me?.display_name ?? "");
+  const [child, setChild] = useState(s.couple.child_name);
+  const [pronoun, setPronoun] = useState(s.couple.child_pronoun);
+  const [label, setLabel] = useState(s.couple.pickup_label);
+  const [link, setLink] = useState<string | null>(null);
+
+  const save = async () => {
+    await run(() => supabase().from("profiles").update({ display_name: name.trim() }).eq("id", s.me));
+    await run(
+      () =>
+        supabase()
+          .from("couples")
+          .update({ child_name: child.trim(), child_pronoun: pronoun, pickup_label: label.trim() })
+          .eq("id", s.couple.id),
+      "Réglages enregistrés",
+    );
+  };
+  const invite = async () => {
+    const token = (await run(() => supabase().rpc("create_invite"))) as string | null;
+    if (token) setLink(`${window.location.origin}${BASE}/invitation?t=${token}`);
+  };
+  const share = async () => {
+    if (!link) return;
+    if (navigator.share) {
+      await navigator.share({ title: "Rejoins notre espace", url: link }).catch(() => {});
+    } else {
+      await navigator.clipboard.writeText(link);
+      toast("Lien copié");
+    }
+  };
+  return (
+    <div className="pt-4">
+      <button onClick={() => router.push("/planning")} className="text-sm font-semibold text-slate-500">
+        ‹ Planning
+      </button>
+      <h1 className="mt-1 text-[28px] font-extrabold">Réglages</h1>
+
+      <Section title="Partenaire">
+        {partner ? (
+          <p className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
+            Espace partagé avec <b>{partner.display_name}</b>.
+          </p>
+        ) : (
+          <div className="space-y-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
+            <p>Invite ton ou ta partenaire avec un lien à usage unique (valable 7 jours).</p>
+            {link ? (
+              <>
+                <Input readOnly value={link} aria-label="Lien d’invitation" onFocus={(e) => e.target.select()} />
+                <Button className="w-full" onClick={() => void share()}>
+                  Partager le lien
+                </Button>
+              </>
+            ) : (
+              <Button className="w-full" onClick={() => void invite()}>
+                Créer un lien d’invitation
+              </Button>
+            )}
+          </div>
+        )}
+      </Section>
+
+      <Section title="Récupérations crèche">
+        <div className="space-y-2 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
+          <Segmented
+            name="Récupérations crèche"
+            value={s.couple.pickups_enabled === false ? "off" : "on"}
+            onChange={(v) =>
+              void run(
+                () => supabase().from("couples").update({ pickups_enabled: v === "on" }).eq("id", s.couple.id),
+                v === "on" ? "Récupérations crèche activées" : "Récupérations crèche désactivées",
+              )
+            }
+            options={[
+              { value: "on", label: "Activées" },
+              { value: "off", label: "Désactivées" },
+            ]}
+          />
+          <p className="text-sm text-slate-500">
+            Désactivées : plus aucune carte, suivi ni rappel de crèche, pour vous deux. Rien n’est effacé, tout revient si
+            vous les réactivez.
+          </p>
+        </div>
+      </Section>
+
+      <Section title="Profil et enfant">
+        <div className="space-y-4 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
+          <label className="block">
+            <Label>Ton prénom</Label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} />
+          </label>
+          <label className="block">
+            <Label>Prénom de l’enfant</Label>
+            <Input value={child} onChange={(e) => setChild(e.target.value)} />
+          </label>
+          <div>
+            <Label>Bouton</Label>
+            <Segmented
+              name="Pronom"
+              value={pronoun}
+              onChange={setPronoun}
+              options={[
+                { value: "la", label: "Je la récupère" },
+                { value: "le", label: "Je le récupère" },
+              ]}
+            />
+          </div>
+          <label className="block">
+            <Label>Libellé des récupérations</Label>
+            <Input value={label} onChange={(e) => setLabel(e.target.value)} />
+          </label>
+          <Button className="w-full" onClick={() => void save()}>
+            Enregistrer
+          </Button>
+        </div>
+      </Section>
+
+      <Section title="Notifications">
+        <PushSettings />
+        <label className="flex items-center gap-3 rounded-2xl bg-white p-4 text-[15px] shadow-sm ring-1 ring-slate-200">
+          <input
+            type="checkbox"
+            className="h-5 w-5"
+            checked={me?.evening_summary !== false}
+            onChange={(e) =>
+              void run(
+                () => supabase().from("profiles").update({ evening_summary: e.target.checked }).eq("id", s.me),
+                e.target.checked ? "Résumé du soir activé" : "Résumé du soir désactivé",
+              )
+            }
+          />
+          <span>
+            Résumé du soir vers 20 h
+            <span className="block text-sm text-slate-500">Ce qui t’attend demain : crèche, rendez-vous, tâches.</span>
+          </span>
+        </label>
+        <label className="mt-3 flex items-center gap-3 text-[15px]">
+          <input
+            type="checkbox"
+            className="h-5 w-5"
+            checked={me?.inbox_reminder !== false}
+            disabled={me?.evening_summary === false}
+            onChange={(e) =>
+              void run(
+                () => supabase().from("profiles").update({ inbox_reminder: e.target.checked }).eq("id", s.me),
+                e.target.checked ? "Rappel de tri activé" : "Rappel de tri désactivé",
+              )
+            }
+          />
+          <span>
+            Rappel « À trier » dans ce résumé
+            <span className="block text-sm text-slate-500">Une ligne en plus, jamais une notification de plus.</span>
+          </span>
+        </label>
+      </Section>
+
+      <Section title="Apparence">
+        <AppearanceSettings />
+      </Section>
+
+      <Section title="Agenda">
+        <AgendaSettings />
+      </Section>
+
+      <Button
+        kind="ghost"
+        className="mt-8 w-full"
+        onClick={() => void supabase().auth.signOut().then(() => router.replace("/connexion"))}
+      >
+        Se déconnecter
+      </Button>
+    </div>
+  );
+}
