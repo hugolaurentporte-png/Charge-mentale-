@@ -81,6 +81,9 @@ export interface Task {
   category?: string | null;
   snoozed_until?: string | null;
   message_id?: UUID | null;
+  /** Rappel (notification pour le propriétaire seul). */
+  remind_at?: string | null;
+  reminder_sent_at?: string | null;
   /** « Garder comme note » (dans Me le dire). */
   is_note?: boolean;
 }

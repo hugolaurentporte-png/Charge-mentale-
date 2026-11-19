@@ -134,7 +134,7 @@ const RPC_TABLES = {
   claim_pickup: ["pickups"], request_relay: ["relay_requests"], respond_relay: ["relay_requests", "pickups"],
   cancel_relay: ["relay_requests"], save_pickups: ["pickups", "topics", "relay_requests"],
   claim_topic: ["topics"], propose_topic: ["topics"], respond_topic: ["topics"], cancel_topic_proposal: ["topics"],
-  create_couple: ["couples", "couple_members"], accept_invite: ["couple_members", "profiles"], create_invite: [],
+  create_couple: ["couples", "couple_members"], mark_messages_read: ["profiles"], accept_invite: ["couple_members", "profiles"], create_invite: [],
 };
 
 const server = http.createServer(async (req, res) => {

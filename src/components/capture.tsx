@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useReady } from "@/lib/store";
-import { addDays, formatDay, formatTime } from "@/lib/dates";
+import { addDays, formatDay, formatTime, nowTimeIn, todayIn, zonedToIso } from "@/lib/dates";
 import { analyze, CATEGORIES, categoryLabel, findDuplicate, normalize, shoppingLabel, type Category } from "@/lib/capture";
 import { newId, onOutboxChange, pending, submit } from "@/lib/outbox";
 import type { Task, UUID } from "@/lib/types";
@@ -248,17 +248,33 @@ export function QuickCapture({ onDone }: { onDone: () => void }) {
 }
 
 type SortWho = "private" | "me" | "partner" | "both";
+type SortKind = "task" | "appointment" | "topic";
 
-/** Trier un élément : en faire une tâche (perso ou partagée), ou l'envoyer aux courses. */
+/** Trier un élément : en faire une tâche (avec rappel possible), un rendez-vous ou un sujet,
+ *  ou l'envoyer aux courses. L'élément « à trier » devient cet objet : rien n'est dupliqué. */
 function SortSheet({ task, onClose }: { task: Task; onClose: () => void }) {
-  const { s, partner, run, toast } = useReady();
+  const { s, partner, run, toast, today } = useReady();
+  const tz = s.couple.timezone;
   const shopping = useShoppingList();
+  const [kind, setKind] = useState<SortKind>("task");
   const [title, setTitle] = useState(task.title);
   const [cat, setCat] = useState<Category | null>((task.category as Category) ?? null);
   const [date, setDate] = useState(task.due_date ?? "");
   const [time, setTime] = useState(task.due_time?.slice(0, 5) ?? "");
   const [who, setWho] = useState<SortWho>("private");
-  const save = async () => {
+  // Rappel : notification pour moi seul.
+  const [remind, setRemind] = useState(Boolean(task.remind_at));
+  const [rDate, setRDate] = useState(task.remind_at ? todayIn(tz, new Date(task.remind_at)) : (task.due_date ?? addDays(today, 1)));
+  const [rTime, setRTime] = useState(task.remind_at ? nowTimeIn(tz, new Date(task.remind_at)).slice(0, 5) : (task.due_time?.slice(0, 5) ?? "09:00"));
+  // Rendez-vous
+  const [aDate, setADate] = useState(task.due_date ?? today);
+  const [aTime, setATime] = useState(task.due_time?.slice(0, 5) ?? "10:00");
+  const [people, setPeople] = useState<UUID[]>([s.me]);
+  // Sujet
+  const [tPriv, setTPriv] = useState(true);
+  const [tMine, setTMine] = useState(false);
+
+  const saveTask = async () => {
     const shared = who !== "private";
     const ok = await run(
       () =>
@@ -273,12 +289,41 @@ function SortSheet({ task, onClose }: { task: Task; onClose: () => void }) {
             is_note: false,
             is_private: !shared,
             snoozed_until: null,
+            remind_at: remind && rDate && rTime ? zonedToIso(rDate, rTime, tz) : null,
             assignee_id: who === "me" ? s.me : who === "partner" ? (partner?.id ?? null) : who === "private" ? s.me : null,
           })
           .eq("id", task.id),
-      shared ? "Tâche partagée" : "Rangé dans Mes tâches",
+      shared ? "Tâche partagée" : remind ? "Tâche créée, rappel programmé" : "Rangé dans Mes tâches",
     );
     if (ok !== null) onClose();
+  };
+  const saveAppointment = async () => {
+    if (!title.trim() || !aDate || !aTime) return;
+    const ok = await run(() =>
+      supabase().from("appointments").insert({
+        couple_id: s.couple.id,
+        title: title.trim(),
+        day: aDate,
+        time: aTime,
+        participants: people,
+      }),
+    );
+    if (ok === null) return;
+    await run(() => supabase().from("tasks").delete().eq("id", task.id));
+    toast("Rendez-vous créé");
+    onClose();
+  };
+  const saveTopic = async () => {
+    if (!title.trim()) return;
+    const ok = await run(() =>
+      supabase()
+        .from("topics")
+        .insert({ couple_id: s.couple.id, title: title.trim(), owner_id: tMine || tPriv ? s.me : null, is_private: tPriv }),
+    );
+    if (ok === null) return;
+    await run(() => supabase().from("tasks").delete().eq("id", task.id));
+    toast("Sujet créé");
+    onClose();
   };
   const toCourses = async () => {
     if (!shopping) return;
@@ -294,43 +339,140 @@ function SortSheet({ task, onClose }: { task: Task; onClose: () => void }) {
     ...(partner ? [{ value: "partner" as SortWho, label: partner.display_name }] : []),
     { value: "both", label: "À deux" },
   ];
+  const members = [s.me, ...(partner ? [partner.id] : [])];
+  const toggle = (id: UUID) =>
+    setPeople((p) => (p.includes(id) ? (p.length > 1 ? p.filter((x) => x !== id) : p) : [...p, id]));
   return (
     <Sheet open onClose={onClose} title="Trier">
       <div className="space-y-4">
+        <div>
+          <Label>En faire…</Label>
+          <Segmented
+            name="Type"
+            value={kind}
+            onChange={setKind}
+            options={[
+              { value: "task", label: "Une tâche" },
+              { value: "appointment", label: "Un RDV" },
+              { value: "topic", label: "Un sujet" },
+            ]}
+          />
+        </div>
         <label className="block">
           <Label>Titre</Label>
           <Input value={title} onChange={(e) => setTitle(e.target.value)} />
         </label>
-        <div>
-          <Label>Catégorie</Label>
-          <CategoryChips value={cat} onChange={setCat} />
-        </div>
-        {cat === "courses" && shopping ? (
-          <Button className="w-full" onClick={() => void toCourses()}>
-            Mettre « {shoppingLabel(title)} » dans {shopping.name}
-          </Button>
-        ) : (
+        {kind === "task" && (
+          <>
+            <div>
+              <Label>Catégorie</Label>
+              <CategoryChips value={cat} onChange={setCat} />
+            </div>
+            {cat === "courses" && shopping ? (
+              <Button className="w-full" onClick={() => void toCourses()}>
+                Mettre « {shoppingLabel(title)} » dans {shopping.name}
+              </Button>
+            ) : (
+              <>
+                <div className="flex gap-3">
+                  <label className="block min-w-0 flex-1">
+                    <Label>Jour (facultatif)</Label>
+                    <Input type="date" aria-label="Jour" value={date} onChange={(e) => setDate(e.target.value)} />
+                  </label>
+                  <label className="block w-32">
+                    <Label>Heure</Label>
+                    <Input type="time" aria-label="Heure du tri" value={time} disabled={!date} onChange={(e) => setTime(e.target.value)} />
+                  </label>
+                </div>
+                <div>
+                  <label className="flex items-center gap-3 text-[15px] font-semibold">
+                    <input type="checkbox" className="h-5 w-5" checked={remind} onChange={(e) => setRemind(e.target.checked)} />
+                    🔔 Me le rappeler
+                  </label>
+                  {remind && (
+                    <div className="mt-2 flex gap-3">
+                      <Input type="date" aria-label="Jour du rappel" value={rDate} onChange={(e) => setRDate(e.target.value)} />
+                      <Input type="time" aria-label="Heure du rappel" className="w-32" value={rTime} onChange={(e) => setRTime(e.target.value)} />
+                    </div>
+                  )}
+                  <p className="mt-1 text-xs text-slate-500">Seul toi es prévenu, même si la tâche est partagée.</p>
+                </div>
+                <div>
+                  <Label>Pour qui ?</Label>
+                  <Segmented name="Pour qui" value={who} onChange={setWho} options={opts} />
+                  <p className="mt-1 text-xs text-slate-500">
+                    {who === "private" ? "Reste visible par toi seul." : "Devient visible par vous deux."}
+                    {who === "partner" && partner ? ` ${partner.display_name} sera prévenue.` : ""}
+                  </p>
+                </div>
+                <Button className="w-full" onClick={() => void saveTask()}>
+                  En faire une tâche
+                </Button>
+              </>
+            )}
+          </>
+        )}
+        {kind === "appointment" && (
           <>
             <div className="flex gap-3">
               <label className="block min-w-0 flex-1">
-                <Label>Jour (facultatif)</Label>
-                <Input type="date" aria-label="Jour" value={date} onChange={(e) => setDate(e.target.value)} />
+                <Label>Jour</Label>
+                <Input type="date" aria-label="Jour du rendez-vous" value={aDate} onChange={(e) => setADate(e.target.value)} />
               </label>
               <label className="block w-32">
                 <Label>Heure</Label>
-                <Input type="time" aria-label="Heure du tri" value={time} disabled={!date} onChange={(e) => setTime(e.target.value)} />
+                <Input type="time" aria-label="Heure du rendez-vous" value={aTime} onChange={(e) => setATime(e.target.value)} />
               </label>
             </div>
             <div>
-              <Label>Pour qui ?</Label>
-              <Segmented name="Pour qui" value={who} onChange={setWho} options={opts} />
-              <p className="mt-1 text-xs text-slate-500">
-                {who === "private" ? "Reste visible par toi seul." : "Devient visible par vous deux."}
-                {who === "partner" && partner ? ` ${partner.display_name} sera prévenue.` : ""}
-              </p>
+              <Label>Participants</Label>
+              <div className="flex gap-2">
+                {members.map((id) => {
+                  const p = s.profiles.find((x) => x.id === id);
+                  const on = people.includes(id);
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() => toggle(id)}
+                      style={on ? { background: p?.color, color: "white" } : undefined}
+                      className={`min-h-10 flex-1 rounded-xl px-3 text-sm font-semibold ${on ? "" : "bg-slate-100 text-slate-600"}`}
+                    >
+                      {id === s.me ? "Toi" : p?.display_name}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="mt-1 text-xs text-slate-500">Un rendez-vous est visible par vous deux.</p>
             </div>
-            <Button className="w-full" onClick={() => void save()}>
-              En faire une tâche
+            <Button className="w-full" onClick={() => void saveAppointment()} disabled={!title.trim() || !aDate || !aTime}>
+              En faire un rendez-vous
+            </Button>
+          </>
+        )}
+        {kind === "topic" && (
+          <>
+            <div>
+              <Label>Visible par</Label>
+              <Segmented
+                name="Visibilité du sujet"
+                value={tPriv ? "me" : "both"}
+                onChange={(v) => setTPriv(v === "me")}
+                options={[
+                  { value: "me", label: "Privé 🔒" },
+                  { value: "both", label: "Nous deux" },
+                ]}
+              />
+            </div>
+            {!tPriv && (
+              <label className="flex items-center gap-3 text-[15px]">
+                <input type="checkbox" className="h-5 w-5" checked={tMine} onChange={(e) => setTMine(e.target.checked)} />
+                Je m’en occupe
+              </label>
+            )}
+            <Button className="w-full" onClick={() => void saveTopic()} disabled={!title.trim()}>
+              En faire un sujet
             </Button>
           </>
         )}
@@ -398,6 +540,7 @@ export function InboxSection() {
             <div className="mt-1 flex flex-wrap gap-2 text-sm text-slate-500">
               {t.category && <Badge>{categoryLabel(t.category)}</Badge>}
               {t.due_date && <span>📅 {formatDay(t.due_date)}</span>}
+              {t.remind_at && <span>🔔 {formatDay(todayIn(s.couple.timezone, new Date(t.remind_at)))} {nowTimeIn(s.couple.timezone, new Date(t.remind_at)).slice(0, 5)}</span>}
               {t.snoozed_until && t.snoozed_until > today && <span>Reporté au {formatDay(t.snoozed_until)}</span>}
             </div>
           </div>
