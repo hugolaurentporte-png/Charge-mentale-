@@ -17,6 +17,7 @@ export interface Couple {
 export interface Profile {
   evening_summary?: boolean;
   inbox_reminder?: boolean;
+  messages_read_at?: string | null;
   id: UUID;
   display_name: string;
   color: string;
@@ -79,6 +80,17 @@ export interface Task {
   inbox?: boolean;
   category?: string | null;
   snoozed_until?: string | null;
+  message_id?: UUID | null;
+  /** « Garder comme note » (dans Me le dire). */
+  is_note?: boolean;
+}
+
+export interface Message {
+  id: UUID;
+  couple_id: UUID;
+  author_id: UUID;
+  body: string;
+  created_at: string;
 }
 
 export interface Appointment {
@@ -142,6 +154,7 @@ export interface Snapshot {
   reactions: TaskReaction[];
   /** Éléments « à trier » (privés, hors planning). */
   inbox?: Task[];
+  messages?: Message[];
 }
 
 export interface TaskReaction {

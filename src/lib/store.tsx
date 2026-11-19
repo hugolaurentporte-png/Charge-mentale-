@@ -34,13 +34,13 @@ const AppCtx = createContext<Ctx | null>(null);
 
 const TABLES = [
   "couples", "profiles", "couple_members", "topics", "pickups", "relay_requests",
-  "tasks", "appointments", "lists", "list_items", "task_reactions",
+  "tasks", "appointments", "lists", "list_items", "task_reactions", "messages",
 ] as const;
 
 async function fetchSnapshot(me: UUID, coupleId: UUID): Promise<Snapshot> {
   const db = supabase();
   const since = new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10);
-  const [couple, members, pickups, relays, topics, tasks, appts, lists, items, favs, goals, reactions] =
+  const [couple, members, pickups, relays, topics, tasks, appts, lists, items, favs, goals, reactions, messages] =
     await Promise.all([
       db.from("couples").select("*").eq("id", coupleId).single(),
       db.from("couple_members").select("user_id").eq("couple_id", coupleId),
@@ -54,6 +54,7 @@ async function fetchSnapshot(me: UUID, coupleId: UUID): Promise<Snapshot> {
       db.from("list_favorites").select("list_id"),
       db.from("goals").select("*").order("created_at"),
       db.from("task_reactions").select("*").order("created_at"),
+      db.from("messages").select("*").order("created_at", { ascending: false }).limit(300),
     ]);
   const firstError = [couple, members, pickups, relays, topics, tasks, appts, lists, items, favs, goals]
     .find((r) => r.error)?.error;
@@ -80,6 +81,7 @@ async function fetchSnapshot(me: UUID, coupleId: UUID): Promise<Snapshot> {
     goals: goals.data ?? [],
     // Table ajoutée après la V1 : son absence ne bloque pas l'app.
     reactions: reactions.error ? [] : (reactions.data ?? []),
+    messages: messages.error ? [] : [...(messages.data ?? [])].reverse(),
   };
 }
 
@@ -257,6 +259,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             items: s.items.filter((i) => !hidden.has(i.id)),
             inbox: s.inbox?.filter((t) => !hidden.has(t.id)),
             topics: s.topics.filter((t) => !hidden.has(t.id)),
+            messages: s.messages?.filter((m) => !hidden.has(m.id)),
           }
         : s,
     [s, hidden],

@@ -270,6 +270,7 @@ function SortSheet({ task, onClose }: { task: Task; onClose: () => void }) {
             due_date: date || null,
             due_time: date && time ? time : null,
             inbox: false,
+            is_note: false,
             is_private: !shared,
             snoozed_until: null,
             assignee_id: who === "me" ? s.me : who === "partner" ? (partner?.id ?? null) : who === "private" ? s.me : null,
@@ -338,52 +339,108 @@ function SortSheet({ task, onClose }: { task: Task; onClose: () => void }) {
   );
 }
 
-/** Boîte « À trier », dans Pour moi. */
+/** « Me le dire » : se parler à soi-même. Chaque note est un élément « à trier »
+ *  (même système), qu'on trie, reporte, supprime ou garde comme simple note. */
 export function InboxSection() {
-  const { s, today, run, deferDelete } = useReady();
+  const { s, today, run, deferDelete, toast, reload } = useReady();
   const [sorting, setSorting] = useState<Task | null>(null);
   const [showLater, setShowLater] = useState(false);
-  const all = (s.inbox ?? []).filter((t) => !t.done);
-  const now = all.filter((t) => !t.snoozed_until || t.snoozed_until <= today);
-  const later = all.filter((t) => t.snoozed_until && t.snoozed_until > today);
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const waiting = usePending();
+  const all = (s.inbox ?? []).filter((t) => !t.done).sort((a, b) => a.created_at.localeCompare(b.created_at));
+  const later = all.filter((t) => !t.is_note && t.snoozed_until && t.snoozed_until > today);
+  const shown = all.filter((t) => !later.includes(t));
+  const toSort = shown.filter((t) => !t.is_note).length;
+
+  const say = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const body = text.trim();
+    if (!body || busy) return;
+    setBusy(true);
+    const a = analyze(body, today);
+    const r = await submit("tasks", {
+      id: newId(),
+      couple_id: s.couple.id,
+      owner_id: s.me,
+      title: (a.title || body).slice(0, 200),
+      note: body.length > 200 ? body.slice(0, 2000) : null,
+      category: a.category,
+      due_date: a.date,
+      due_time: a.date ? a.time : null,
+      inbox: true,
+      is_private: true,
+    });
+    setBusy(false);
+    if (typeof r === "object") {
+      toast("Impossible d’enregistrer : " + String((r.error as { message?: string })?.message ?? "erreur"));
+      return;
+    }
+    if (r === "queued") toast("Hors connexion : enregistré dès le retour du réseau");
+    else void reload();
+    setText("");
+  };
   const snooze = (id: UUID) =>
     run(() => supabase().from("tasks").update({ snoozed_until: addDays(today, 1) }).eq("id", id), "Reporté à demain");
+  const keep = (id: UUID) => run(() => supabase().from("tasks").update({ is_note: true }).eq("id", id), "Gardé comme note");
   const remove = (t: Task) =>
     deferDelete(t.id, `« ${t.title} » supprimé`, () => supabase().from("tasks").delete().eq("id", t.id));
-  const row = (t: Task) => (
-    <div key={t.id} className="rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200">
-      <div className="flex items-start gap-2">
-        <div className="min-w-0 flex-1">
-          <div className="font-semibold">{t.title}</div>
-          <div className="mt-1 flex flex-wrap gap-2 text-sm text-slate-500">
-            {t.category && <Badge>{categoryLabel(t.category)}</Badge>}
-            {t.due_date && <span>📅 {formatDay(t.due_date)}</span>}
-            {t.snoozed_until && t.snoozed_until > today && <span>Reporté au {formatDay(t.snoozed_until)}</span>}
+
+  const bubble = (t: Task) => (
+    <div key={t.id} className="flex justify-end">
+      <div className={`w-[88%] rounded-2xl rounded-br-sm p-3 shadow-sm ring-1 ${t.is_note ? "bg-violet-50 ring-violet-200" : "bg-white ring-slate-200"}`}>
+        <div className="flex items-start gap-2">
+          <div className="min-w-0 flex-1">
+            <div className="whitespace-pre-wrap break-words font-semibold">
+              {t.is_note ? "📝 " : ""}
+              {t.note ?? t.title}
+            </div>
+            <div className="mt-1 flex flex-wrap gap-2 text-sm text-slate-500">
+              {t.category && <Badge>{categoryLabel(t.category)}</Badge>}
+              {t.due_date && <span>📅 {formatDay(t.due_date)}</span>}
+              {t.snoozed_until && t.snoozed_until > today && <span>Reporté au {formatDay(t.snoozed_until)}</span>}
+            </div>
           </div>
+          <button aria-label={`Supprimer ${t.title}`} onClick={() => remove(t)} className="h-9 w-9 text-xl text-slate-400">
+            ×
+          </button>
         </div>
-        <button aria-label={`Supprimer ${t.title}`} onClick={() => remove(t)} className="h-9 w-9 text-xl text-slate-400">
-          ×
-        </button>
-      </div>
-      <div className="mt-2 flex gap-2">
-        <Button className="!min-h-9 flex-1" onClick={() => setSorting(t)}>
-          Trier
-        </Button>
-        <Button kind="secondary" className="!min-h-9 flex-1" onClick={() => void snooze(t.id)}>
-          Plus tard
-        </Button>
+        <div className="mt-2 flex gap-2">
+          <Button className="!min-h-9 flex-1 text-sm" onClick={() => setSorting(t)}>
+            Trier
+          </Button>
+          {!t.is_note && (
+            <>
+              <Button kind="secondary" className="!min-h-9 flex-1 text-sm" onClick={() => void snooze(t.id)}>
+                Plus tard
+              </Button>
+              <Button kind="secondary" className="!min-h-9 flex-1 text-sm" onClick={() => void keep(t.id)}>
+                Garder
+              </Button>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
+
   return (
-    <Section title={`À trier${now.length ? ` (${now.length})` : ""}`}>
-      {now.length ? now.map(row) : <Empty>Rien à trier. Le bouton + › Vite pour vider ta tête.</Empty>}
+    <Section title={`Me le dire · À trier (${toSort})`}>
+      <p className="px-1 text-sm text-slate-500">Dis-toi ce que tu ne veux pas oublier. Personne d’autre ne le voit.</p>
+      {shown.length ? shown.map(bubble) : <Empty>Rien à trier. Écris ci-dessous pour vider ta tête.</Empty>}
       {later.length > 0 && (
         <button onClick={() => setShowLater((x) => !x)} className="text-sm font-semibold text-slate-500 underline">
           {showLater ? "Masquer" : "Voir"} les reportés ({later.length})
         </button>
       )}
-      {showLater && later.map(row)}
+      {showLater && later.map(bubble)}
+      <form onSubmit={say} className="flex gap-2">
+        <Input aria-label="Me le dire" value={text} onChange={(e) => setText(e.target.value)} placeholder="Ne pas oublier de…" enterKeyHint="send" />
+        <Button type="submit" disabled={!text.trim() || busy} aria-label="Me le dire, envoyer">
+          ➤
+        </Button>
+      </form>
+      {waiting > 0 && <p className="text-sm text-amber-700">{waiting} en attente d’envoi (hors connexion)</p>}
       {sorting && <SortSheet task={sorting} onClose={() => setSorting(null)} />}
     </Section>
   );

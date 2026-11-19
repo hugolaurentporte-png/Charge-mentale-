@@ -155,15 +155,20 @@ export function TaskForm({
   day,
   isPrivate = false,
   topicId,
+  initialTitle,
+  messageId,
   onDone,
 }: {
   day?: string;
   isPrivate?: boolean;
   topicId?: UUID;
+  /** Pré-remplissage depuis un message des Échanges. */
+  initialTitle?: string;
+  messageId?: UUID;
   onDone: () => void;
 }) {
   const { s, partner, run, today } = useReady();
-  const [title, setTitle] = useState("");
+  const [title, setTitle] = useState(initialTitle ?? "");
   const [priv, setPriv] = useState(isPrivate);
   const [linked, setLinked] = useState<UUID | null>(topicId ?? null);
   const [who, setWho] = useState<WhoChoice>(isPrivate ? "me" : "none");
@@ -200,6 +205,7 @@ export function TaskForm({
         is_private: priv,
         assignee_id: priv ? s.me : whoToId(who, s.me, partner?.id),
         topic_id: linked && Boolean(s.topics.find((t) => t.id === linked)?.is_private) === priv ? linked : null,
+        ...(messageId ? { message_id: messageId } : {}),
       }),
     );
     if (ok !== null) onDone();

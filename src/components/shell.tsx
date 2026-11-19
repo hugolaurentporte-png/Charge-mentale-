@@ -117,11 +117,15 @@ function QuickAdd({ ctx, onClose }: { ctx: FabContext; onClose: () => void }) {
 const TABS = [
   { href: "/planning", label: "Planning", icon: "M7 3v3M17 3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z" },
   { href: "/listes", label: "Listes", icon: "M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01" },
+  { href: "/echanges", label: "Échanges", icon: "M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.4A8 8 0 1 1 21 12Z" },
   { href: "/moi", label: "Pour moi", icon: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7 8a7 7 0 0 1 14 0" },
 ];
 
 function TabBar() {
   const path = usePathname();
+  const { s } = useApp();
+  const readAt = s?.profiles.find((p) => p.id === s.me)?.messages_read_at ?? "";
+  const unread = (s?.messages ?? []).filter((m) => m.author_id !== s?.me && m.created_at > readAt).length;
   return (
     <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
       <div className="mx-auto flex max-w-md">
@@ -136,9 +140,19 @@ function TabBar() {
               aria-current={active ? "page" : undefined}
               className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-semibold ${active ? "text-slate-900" : "text-slate-400"}`}
             >
-              <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                <path d={t.icon} />
-              </svg>
+              <span className="relative">
+                <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <path d={t.icon} />
+                </svg>
+                {t.href === "/echanges" && unread > 0 && !active && (
+                  <span
+                    aria-label={`${unread} message${unread > 1 ? "s" : ""} non lu${unread > 1 ? "s" : ""}`}
+                    className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white"
+                  >
+                    {unread > 9 ? "9+" : unread}
+                  </span>
+                )}
+              </span>
               {t.label}
             </Link>
           );

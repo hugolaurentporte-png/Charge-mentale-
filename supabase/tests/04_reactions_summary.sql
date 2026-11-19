@@ -241,5 +241,35 @@ do $$ begin
   assert (select count(*) from public.topics where kind = 'pickup_week' and week_start = '2030-02-04') = 0, 'sujet crèche supprimé';
   assert (select count(*) from public.pickups where day = '2030-02-04') = 1, 'récupération conservée';
 end $$;
+
+-- Échanges : une rafale de messages = une seule notification ; chacun ne supprime que les siens.
+reset role;
+delete from net.calls;
+set role authenticated;
+select pg_temp.login(:hugo);
+insert into public.messages (couple_id, body) select couple_id, 'Tu passes à la pharmacie ?' from public.couple_members limit 1;
+insert into public.messages (couple_id, body) select couple_id, 'Et du pain aussi' from public.couple_members limit 1;
+select pg_temp.login(:camille);
+delete from public.messages where body = 'Tu passes à la pharmacie ?';
+do $$ begin
+  assert (select count(*) from public.messages) = 2, 'messages visibles, pas supprimables par l''autre';
+end $$;
+reset role;
+do $$ declare b jsonb; begin
+  assert (select count(*) from net.calls) = 1, format('1 notification attendue, %s', (select count(*) from net.calls));
+  select body into b from net.calls;
+  assert b->>'body' = 'Tu passes à la pharmacie ?', b->>'body';
+  assert b->>'url' = '/echanges/', 'lien vers les échanges';
+end $$;
+-- Note gardée : hors du rappel de tri.
+set role authenticated;
+select pg_temp.login(:hugo);
+insert into public.tasks (couple_id, title, is_private, inbox, is_note)
+  select couple_id, 'Penser à respirer', true, true, true from public.couple_members limit 1;
+reset role;
+do $$ begin
+  assert coalesce(public.evening_summary_text('aaaaaaaa-0000-0000-0000-000000000001', (now() at time zone 'Europe/Paris')::date + 1), '')
+    not like '%À trier%', 'une note gardée ne compte pas à trier';
+end $$;
 reset role;
 select 'TOUS LES TESTS RETRAIT / ANNULER SONT PASSÉS' as resultat;

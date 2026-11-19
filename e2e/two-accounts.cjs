@@ -503,6 +503,35 @@ async function api(user, path, init = {}) {
   await notSee(c, "Vacances de février");
   ok("Un sujet se supprime depuis sa carte, avec « Annuler » pendant 5 s");
 
+  // Échanges : message en direct, pastille non lue, « En faire une tâche »
+  await tab(h, "Échanges");
+  await h.getByLabel("Message").fill("Tu peux prendre du pain demain ?");
+  await h.getByRole("button", { name: "Envoyer" }).click();
+  await see(h, "Tu peux prendre du pain demain ?");
+  await c.getByLabel("1 message non lu").waitFor({ state: "visible", timeout: 8000 });
+  await c.getByRole("link", { name: /Échanges/ }).click();
+  await c.getByRole("button", { name: "Message de Hugo" }).click();
+  await c.getByRole("button", { name: "En faire une tâche" }).click();
+  assert.equal(await c.getByLabel("Titre", { exact: true }).inputValue(), "Tu peux prendre du pain ?");
+  await c.getByRole("button", { name: "Ajouter", exact: true }).last().click();
+  await see(c, "✓ Tâche : Tu peux prendre du pain ?");
+  await see(h, "✓ Tâche : Tu peux prendre du pain ?");
+  await shot(c, "20-echanges");
+  ok("Échanges : message en direct, pastille non lue, message transformé en tâche");
+
+  // Me le dire : note privée, gardée comme note (hors « à trier »)
+  await tab(h, "Pour moi");
+  await h.getByLabel("Me le dire", { exact: true }).fill("Penser à l’anniversaire de mamie");
+  await h.getByRole("button", { name: "Me le dire, envoyer" }).click();
+  await see(h, "Me le dire · À trier (1)");
+  await h.getByRole("button", { name: "Garder" }).click();
+  await see(h, "Me le dire · À trier (0)");
+  await see(h, "📝");
+  await shot(h, "21-me-le-dire");
+  await tab(c, "Pour moi");
+  await notSee(c, "anniversaire de mamie");
+  ok("Me le dire : notes privées dans À trier, « Garder » les sort du tri");
+
   await browser.close();
   console.log(`\n${steps.length} vérifications passées.`);
 })().catch(async (err) => {
