@@ -69,7 +69,7 @@ function InvitePageInner() {
             <>
               <label className="block">
                 <Label>Ton prénom</Label>
-                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Camille" />
+                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ton prénom" />
               </label>
               <Button className="w-full" disabled={!name.trim()} onClick={() => void accept()}>
                 Rejoindre l’espace
