@@ -39,14 +39,14 @@ export default function ListesPage() {
         ))}
         <NewListForm />
       </Section>
-      {mine.length > 0 && (
-        <Section title="Mes listes privées 🔒">
-          <p className="px-1 text-sm text-slate-500">Visibles par toi seul. Tu les retrouves aussi dans « Pour moi ».</p>
-          {mine.map((l) => (
-            <ListLink key={l.id} list={l} />
-          ))}
-        </Section>
-      )}
+      <Section title="Mes listes privées 🔒">
+        <p className="px-1 text-sm text-slate-500">Visibles par toi seul. Tu les retrouves aussi dans « Pour moi ».</p>
+        {mine.map((l) => (
+          <ListLink key={l.id} list={l} />
+        ))}
+        <NewListForm isPrivate />
+      </Section>
+
     </>
   );
 }

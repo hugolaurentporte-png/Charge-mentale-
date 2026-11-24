@@ -1,4 +1,5 @@
 "use client";
+import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useReady } from "@/lib/store";
 import { relativeDay } from "@/lib/dates";
@@ -14,6 +15,9 @@ export default function MoiPage() {
   const tasks = s.tasks
     .filter((t) => t.is_private && t.owner_id === s.me)
     .sort((a, b) => Number(a.done) - Number(b.done) || `${a.due_date ?? "9"}${a.due_time ?? "99"}`.localeCompare(`${b.due_date ?? "9"}${b.due_time ?? "99"}`));
+  const [showDone, setShowDone] = useState(false);
+  const openTasks = tasks.filter((t) => !t.done);
+  const doneTasks = tasks.filter((t) => t.done);
   const goals = s.goals.slice().sort((a, b) => Number(a.achieved) - Number(b.achieved));
   const lists = s.lists.filter((l) => l.is_private && l.owner_id === s.me);
   return (
@@ -22,7 +26,17 @@ export default function MoiPage() {
       <p className="px-1 text-sm text-slate-500">Tout ce qui est ici n’est visible que par toi.</p>
       <InboxSection />
       <Section title="Mes tâches">
-        {tasks.length ? tasks.map((t) => <TaskRow key={t.id} task={t} showDate />) : <Empty>Aucune tâche perso.</Empty>}
+        {openTasks.length ? (
+          openTasks.map((t) => <TaskRow key={t.id} task={t} showDate />)
+        ) : (
+          <Empty>{doneTasks.length ? "Tout est fait 👏" : "Aucune tâche perso."}</Empty>
+        )}
+        {doneTasks.length > 0 && (
+          <button className="px-1 text-left text-sm font-semibold text-slate-500 underline" onClick={() => setShowDone((v) => !v)}>
+            {showDone ? "Masquer" : "Voir"} les tâches faites ({doneTasks.length})
+          </button>
+        )}
+        {showDone && doneTasks.map((t) => <TaskRow key={t.id} task={t} showDate />)}
       </Section>
       <Section title="Objectifs">
         {goals.length ? (

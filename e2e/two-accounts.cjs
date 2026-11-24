@@ -353,18 +353,19 @@ async function api(user, path, init = {}) {
 
   // Liste privée créée depuis l'onglet Listes
   await h.goto(`${APP}/listes`);
-  await h.getByRole("button", { name: "Nouvelle liste" }).click();
-  await h.getByPlaceholder("Pharmacie").fill("Mes lectures");
-  await h.getByLabel("Privée 🔒 · visible par moi seul").check();
+  await h.getByRole("button", { name: "Nouvelle liste privée 🔒" }).click();
+  await h.getByPlaceholder("Ma liste perso").fill("Mes lectures");
   await h.getByRole("button", { name: "Créer" }).click();
   await see(h, "Mes listes privées 🔒");
+  await see(h, "Mes lectures");
+  await shot(h, "listes-section-privee");
   await h.getByRole("link", { name: /Mes lectures/ }).click();
   await see(h, "Privée · visible par toi seul");
   await h.getByLabel("Article", { exact: true }).fill("Roman policier");
   await h.getByRole("button", { name: "Ajouter l’article" }).click();
   await h.getByLabel("Cocher Roman policier").check();
   await see(h, "Tout est fait.");
-  await shot(h, "11-liste-privee");
+  await shot(h, "liste-privee");
   const lecturesId = new URL(h.url()).searchParams.get("id");
   await tab(h, "Pour moi");
   await see(h, "Mes lectures");
@@ -401,9 +402,14 @@ async function api(user, path, init = {}) {
   await see(h, "↻ Chaque semaine");
   await see(h, "« Prendre l’ordonnance »");
   await h.getByLabel("Terminer Kiné").first().check();
+  // Une tâche cochée se replie : elle reste accessible sous « Voir les tâches faites ».
+  await see(h, "Voir les tâches faites (1)");
+  await shot(h, "taches-faites-repliees");
+  assert.equal(await h.getByLabel("Terminer Kiné").count(), 1);
+  await h.getByText("Voir les tâches faites (1)").click();
   await h.waitForFunction(() => document.querySelectorAll('input[aria-label="Terminer Kiné"]').length === 2, null, { timeout: 8000 });
   await shot(h, "12-recurrence-note");
-  ok("Petit mot et répétition : une fois « Kiné » terminée, la séance de la semaine suivante est créée");
+  ok("Petit mot et répétition : une fois « Kiné » terminée, elle se replie et la séance de la semaine suivante est créée");
 
   // Changer l'heure de la récupération du jour depuis la carte
   await tab(h, "Planning");
