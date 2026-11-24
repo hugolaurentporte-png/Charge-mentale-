@@ -351,6 +351,31 @@ async function api(user, path, init = {}) {
   assert.deepEqual(still.body.map((i) => i.label), ["Week-end surprise"]);
   ok("Camille n’a aucun accès à la surprise de Hugo : ni dans l’app, ni en lecture, modification ou ajout via l’API");
 
+  // Liste privée créée depuis l'onglet Listes
+  await h.goto(`${APP}/listes`);
+  await h.getByRole("button", { name: "Nouvelle liste" }).click();
+  await h.getByPlaceholder("Pharmacie").fill("Mes lectures");
+  await h.getByLabel("Privée 🔒 · visible par moi seul").check();
+  await h.getByRole("button", { name: "Créer" }).click();
+  await see(h, "Mes listes privées 🔒");
+  await h.getByRole("link", { name: /Mes lectures/ }).click();
+  await see(h, "Privée · visible par toi seul");
+  await h.getByLabel("Article", { exact: true }).fill("Roman policier");
+  await h.getByRole("button", { name: "Ajouter l’article" }).click();
+  await h.getByLabel("Cocher Roman policier").check();
+  await see(h, "Tout est fait.");
+  await shot(h, "11-liste-privee");
+  const lecturesId = new URL(h.url()).searchParams.get("id");
+  await tab(h, "Pour moi");
+  await see(h, "Mes lectures");
+  await c.goto(`${APP}/listes`);
+  await notSee(c, "Mes lectures");
+  await tab(c, "Pour moi");
+  await notSee(c, "Mes lectures");
+  const lectures = await api(CAMILLE, `list_items?select=*&list_id=eq.${lecturesId}`, { method: "GET" });
+  assert.deepEqual(lectures.body, []);
+  ok("Hugo crée une liste privée depuis Listes, la coche ; Camille ne la voit nulle part, même via l’API");
+
   // Écritures directes interdites sur le planning (passage obligé par le serveur)
   const direct = await api(CAMILLE, "pickups?day=eq.2026-11-20", { method: "PATCH", body: JSON.stringify({ responsible_id: null }) });
   assert.deepEqual(direct.body, []);

@@ -172,12 +172,12 @@ function ListPageInner() {
             {todo.map((i) => (
               <ItemRow key={i.id} item={i} />
             ))}
-            {!todo.length && <Empty>Tout est pris.</Empty>}
+            {!todo.length && <Empty>{list.is_private ? "Tout est fait." : "Tout est pris."}</Empty>}
           </div>
           {done.length > 0 && (
             <div className="mt-6 space-y-2">
               <div className="flex items-center justify-between px-1">
-                <h2 className="text-sm font-bold uppercase tracking-wide text-slate-500">Dans le panier</h2>
+                <h2 className="text-sm font-bold uppercase tracking-wide text-slate-500">{list.is_private ? "Fait" : "Dans le panier"}</h2>
                 <button
                   className="text-sm font-semibold text-slate-500 underline"
                   onClick={() => void run(() => supabase().from("list_items").delete().in("id", done.map((d) => d.id)))}

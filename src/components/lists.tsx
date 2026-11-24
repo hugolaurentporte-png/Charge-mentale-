@@ -37,7 +37,11 @@ export function ListLink({ list }: { list: List }) {
       <div className="min-w-0 flex-1">
         <div className="text-[16px] font-bold">{list.name}</div>
         <div className="text-sm text-slate-500">
-          {left} {list.kind === "gifts" ? (left > 1 ? "idées" : "idée") : left > 1 ? "articles à acheter" : "article à acheter"}
+          {left} {list.kind === "gifts"
+            ? left > 1 ? "idées" : "idée"
+            : list.is_private
+              ? left > 1 ? "éléments à faire" : "élément à faire"
+              : left > 1 ? "articles à acheter" : "article à acheter"}
         </div>
       </div>
       <FavStar list={list} />
@@ -50,6 +54,7 @@ export function NewListForm({ isPrivate = false }: { isPrivate?: boolean }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [gifts, setGifts] = useState(false);
+  const [priv, setPriv] = useState(isPrivate);
   if (!open)
     return (
       <Button kind="secondary" className="w-full" onClick={() => setOpen(true)}>
@@ -64,11 +69,13 @@ export function NewListForm({ isPrivate = false }: { isPrivate?: boolean }) {
         couple_id: s.couple.id,
         name: name.trim(),
         kind: gifts ? "gifts" : "items",
-        is_private: isPrivate,
+        is_private: priv,
       }),
+      priv && !isPrivate ? "Liste privée créée, visible par toi seul" : undefined,
     );
     if (ok !== null) {
       setName("");
+      setPriv(isPrivate);
       setOpen(false);
     }
   };
@@ -79,6 +86,12 @@ export function NewListForm({ isPrivate = false }: { isPrivate?: boolean }) {
         <input type="checkbox" className="h-5 w-5" checked={gifts} onChange={(e) => setGifts(e.target.checked)} />
         Liste d’idées cadeaux
       </label>
+      {!isPrivate && (
+        <label className="flex items-center gap-3 text-[15px]">
+          <input type="checkbox" className="h-5 w-5 accent-violet-600" checked={priv} onChange={(e) => setPriv(e.target.checked)} />
+          Privée 🔒 · visible par moi seul
+        </label>
+      )}
       <div className="flex gap-2">
         <Button type="submit" className="flex-1" disabled={!name.trim()}>
           Créer

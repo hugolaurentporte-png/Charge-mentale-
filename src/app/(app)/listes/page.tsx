@@ -17,6 +17,7 @@ export default function ListesPage() {
   const closed = s.topics.filter((t) => t.status === "closed");
   const todo = s.tasks.filter((t) => !t.is_private && !t.due_date && !t.done);
   const lists = s.lists.filter((l) => !l.is_private);
+  const mine = s.lists.filter((l) => l.is_private && l.owner_id === s.me);
   return (
     <>
       <Header title="Listes" />
@@ -38,6 +39,14 @@ export default function ListesPage() {
         ))}
         <NewListForm />
       </Section>
+      {mine.length > 0 && (
+        <Section title="Mes listes privées 🔒">
+          <p className="px-1 text-sm text-slate-500">Visibles par toi seul. Tu les retrouves aussi dans « Pour moi ».</p>
+          {mine.map((l) => (
+            <ListLink key={l.id} list={l} />
+          ))}
+        </Section>
+      )}
     </>
   );
 }
