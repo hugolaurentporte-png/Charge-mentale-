@@ -128,6 +128,96 @@ function Gifts({ listId, items }: { listId: string; items: ListItem[] }) {
   );
 }
 
+const norm = (t: string) => t.trim().toLocaleLowerCase("fr");
+
+/** Copie des éléments vers une autre liste ; l'original n'est pas modifié. */
+function CopySheet({ listId, items, onClose }: { listId: string; items: ListItem[]; onClose: () => void }) {
+  const { s, partner, run } = useReady();
+  const source = s.lists.find((l) => l.id === listId);
+  const targets = s.lists.filter((l) => l.id !== listId && l.kind === "items");
+  const [target, setTarget] = useState(targets[0]?.id ?? "");
+  const [picked, setPicked] = useState<Set<string>>(() => new Set(items.filter((i) => !i.checked).map((i) => i.id)));
+  const dest = s.lists.find((l) => l.id === target);
+  const already = new Set(s.items.filter((i) => i.list_id === target && !i.checked).map((i) => norm(i.label)));
+  const toCopy = items.filter((i) => picked.has(i.id) && !already.has(norm(i.label)));
+  const skipped = items.filter((i) => picked.has(i.id)).length - toCopy.length;
+  const revealed = Boolean(source?.is_private && dest && !dest.is_private);
+  const toggle = (id: string) =>
+    setPicked((p) => {
+      const n = new Set(p);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+  const copy = async () => {
+    if (!dest || !toCopy.length) return;
+    const ok = await run(
+      () => supabase().from("list_items").insert(toCopy.map((i) => ({ list_id: dest.id, label: i.label, quantity: i.quantity }))),
+      `${toCopy.length} ${toCopy.length > 1 ? "éléments copiés" : "élément copié"} dans « ${dest.name} »`,
+    );
+    if (ok !== null) onClose();
+  };
+  return (
+    <Sheet open onClose={onClose} title="Copier vers une autre liste">
+      {targets.length === 0 ? (
+        <Empty>Aucune autre liste où copier. Crée d’abord une liste.</Empty>
+      ) : (
+        <div className="mt-3 space-y-4">
+          <label className="block">
+            <span className="mb-1 block text-sm font-semibold text-slate-600">Dans la liste</span>
+            <select
+              aria-label="Liste de destination"
+              value={target}
+              onChange={(e) => setTarget(e.target.value)}
+              className="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-[16px]"
+            >
+              {targets.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.name} {l.is_private ? "(privée 🔒)" : "(partagée)"}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-semibold text-slate-600">Éléments à copier</span>
+              <button
+                type="button"
+                className="text-sm font-semibold text-slate-500 underline"
+                onClick={() => setPicked(picked.size === items.length ? new Set() : new Set(items.map((i) => i.id)))}
+              >
+                {picked.size === items.length ? "Tout décocher" : "Tout cocher"}
+              </button>
+            </div>
+            {items.map((i) => (
+              <label key={i.id} className="flex items-center gap-3 rounded-xl bg-slate-50 px-3 py-2 text-[16px]">
+                <input type="checkbox" className="h-5 w-5" checked={picked.has(i.id)} onChange={() => toggle(i.id)} />
+                <span className={i.checked ? "text-slate-400" : ""}>
+                  {i.label}
+                  {i.quantity && <span className="ml-1 text-slate-500">× {i.quantity}</span>}
+                </span>
+              </label>
+            ))}
+          </div>
+          {skipped > 0 && (
+            <p className="text-sm text-slate-500">
+              {skipped} {skipped > 1 ? "éléments sont déjà" : "élément est déjà"} dans « {dest?.name} » : pas de doublon.
+            </p>
+          )}
+          {revealed && (
+            <p role="alert" className="rounded-xl bg-amber-50 p-3 text-sm font-semibold text-amber-900 ring-1 ring-amber-200">
+              « {dest?.name} » est partagée : {partner?.display_name ?? "l’autre"} verra les éléments copiés. Ta liste privée, elle, reste privée.
+            </p>
+          )}
+          <Button className="w-full" disabled={!toCopy.length} onClick={() => void copy()}>
+            {toCopy.length ? `Copier ${toCopy.length} ${toCopy.length > 1 ? "éléments" : "élément"}` : "Rien à copier"}
+          </Button>
+        </div>
+      )}
+    </Sheet>
+  );
+}
+
 export default function ListPage() {
   return (
     <Suspense>
@@ -140,6 +230,7 @@ function ListPageInner() {
   const id = useSearchParams().get("id") ?? "";
   const { s, run } = useReady();
   const router = useRouter();
+  const [copying, setCopying] = useState(false);
   useFab({ mode: "list", listId: id });
   const list = s.lists.find((l) => l.id === id);
   if (!list) return <Empty>Liste introuvable.</Empty>;
@@ -172,12 +263,12 @@ function ListPageInner() {
             {todo.map((i) => (
               <ItemRow key={i.id} item={i} />
             ))}
-            {!todo.length && <Empty>Tout est pris.</Empty>}
+            {!todo.length && <Empty>{list.is_private ? "Tout est fait." : "Tout est pris."}</Empty>}
           </div>
           {done.length > 0 && (
             <div className="mt-6 space-y-2">
               <div className="flex items-center justify-between px-1">
-                <h2 className="text-sm font-bold uppercase tracking-wide text-slate-500">Dans le panier</h2>
+                <h2 className="text-sm font-bold uppercase tracking-wide text-slate-500">{list.is_private ? "Fait" : "Dans le panier"}</h2>
                 <button
                   className="text-sm font-semibold text-slate-500 underline"
                   onClick={() => void run(() => supabase().from("list_items").delete().in("id", done.map((d) => d.id)))}
@@ -192,6 +283,12 @@ function ListPageInner() {
           )}
         </>
       )}
+      {list.kind === "items" && items.length > 0 && (
+        <Button kind="secondary" className="mt-8 w-full" onClick={() => setCopying(true)}>
+          Copier vers une autre liste…
+        </Button>
+      )}
+      {copying && <CopySheet listId={id} items={items} onClose={() => setCopying(false)} />}
       <Button kind="ghost" className="mt-8 w-full text-red-700" onClick={() => void removeList()}>
         Supprimer la liste
       </Button>

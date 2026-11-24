@@ -12,7 +12,7 @@ const ANON = process.env.ANON_KEY || "mock-anon-key";
 const SHOTS = process.env.SHOTS_DIR || "e2e/captures";
 const run = Date.now();
 const HUGO = { email: `hugo.${run}@test.fr`, password: "motdepasse1", name: "Hugo" };
-const CAMILLE = { email: `camille.${run}@test.fr`, password: "motdepasse2", name: "Camille" };
+const CAMILLE = { email: `marlene.${run}@test.fr`, password: "motdepasse2", name: "Marlene" };
 // Mardi 17 novembre 2026, 8 h à Paris ; jeudi 19 pour les relances.
 const TUESDAY = new Date("2026-11-17T08:00:00+01:00");
 const THURSDAY = new Date("2026-11-19T08:00:00+01:00");
@@ -94,7 +94,7 @@ async function api(user, path, init = {}) {
   await c.getByLabel("Ton prénom").fill(CAMILLE.name);
   await c.getByRole("button", { name: "Rejoindre l’espace" }).click();
   await c.waitForURL(/planning/);
-  ok("Camille rejoint l’espace avec son propre compte");
+  ok("Marlene rejoint l’espace avec son propre compte");
 
   // Le lien ne sert qu'une fois
   const ctxE = await browser.newContext(device);
@@ -115,7 +115,7 @@ async function api(user, path, init = {}) {
   };
   await setDay("mardi", "17:30", "Moi");
   await h.getByLabel("Début mardi").fill("08:30");
-  await setDay("mercredi", "18:00", "Camille");
+  await setDay("mercredi", "18:00", "Marlene");
   await setDay("jeudi", "16:45", "À décider");
   await setDay("vendredi", "17:15", "À décider");
   await shot(h, "01-organiser-recuperations");
@@ -130,19 +130,19 @@ async function api(user, path, init = {}) {
   await see(c, "17 h 30 · Hugo récupère Juliette");
   ok("À l’ouverture, chacun voit l’heure et le responsable du jour (« Tu » / prénom)");
 
-  // Vendredi à couvrir : dans les suivis de Hugo (organisateur), pas de Camille
+  // Vendredi à couvrir : dans les suivis de Hugo (organisateur), pas de Marlene
   await see(h, "Vendredi 20 nov. · ");
   await notSee(c, "Tu organises la crèche");
   ok("Les jours non couverts remontent dans les suivis de l’organisateur uniquement");
 
-  // Camille prend jeudi depuis la vue Semaine
+  // Marlene prend jeudi depuis la vue Semaine
   await c.getByRole("radio", { name: "Semaine" }).click();
   await c.getByRole("button", { name: "Je la récupère" }).first().click();
   await see(c, "C’est noté");
   // Hugo voit le changement sans recharger (temps réel)
   await h.getByRole("radio", { name: "Semaine" }).click();
-  await see(h, "Camille", { exact: true });
-  ok("Camille prend un créneau libre ; Hugo le voit sans recharger");
+  await see(h, "Marlene", { exact: true });
+  ok("Marlene prend un créneau libre ; Hugo le voit sans recharger");
 
   // Vendredi reste à couvrir chez Hugo, quel que soit le parent qui fera le trajet
   await h.getByRole("radio", { name: "Aujourd’hui" }).click();
@@ -164,29 +164,29 @@ async function api(user, path, init = {}) {
   const camLost = await c.getByText("s’en occupe déjà").count();
   assert.equal(hugoGot + camGot, 1, "un seul gagnant");
   assert.equal(hugoLost + camLost, 1, "le second voit le résultat");
-  ok(`Double appui simultané sur vendredi : un seul enregistrement retenu (${hugoGot ? "Hugo" : "Camille"})`);
+  ok(`Double appui simultané sur vendredi : un seul enregistrement retenu (${hugoGot ? "Hugo" : "Marlene"})`);
 
   // --- Relais : demander, refuser, annuler, accepter ----------------------
   await h.getByRole("radio", { name: "Aujourd’hui" }).click();
-  await h.getByRole("button", { name: "Demander un relais à Camille" }).click();
+  await h.getByRole("button", { name: "Demander un relais à Marlene" }).click();
   await c.getByRole("radio", { name: "Aujourd’hui" }).click();
   await see(c, "Hugo te demande de la récupérer");
   await c.getByRole("button", { name: "Refuser" }).first().click();
-  await see(h, "Demander un relais à Camille");
+  await see(h, "Demander un relais à Marlene");
   await see(h, "17 h 30 · Tu récupères Juliette");
-  ok("Camille refuse un relais : le nom ne change pas");
-  await h.getByRole("button", { name: "Demander un relais à Camille" }).click();
+  ok("Marlene refuse un relais : le nom ne change pas");
+  await h.getByRole("button", { name: "Demander un relais à Marlene" }).click();
   await see(h, "en attente");
   await h.getByRole("button", { name: "Annuler" }).click();
-  await see(h, "Demander un relais à Camille");
+  await see(h, "Demander un relais à Marlene");
   ok("Hugo annule une demande en attente");
-  await h.getByRole("button", { name: "Demander un relais à Camille" }).click();
+  await h.getByRole("button", { name: "Demander un relais à Marlene" }).click();
   await see(c, "Hugo te demande de la récupérer");
   await see(h, "17 h 30 · Tu récupères Juliette");
   await shot(c, "04-demande-relais-camille");
   await c.getByRole("button", { name: "Accepter" }).first().click();
   await see(c, "17 h 30 · Tu récupères Juliette");
-  await see(h, "17 h 30 · Camille récupère Juliette");
+  await see(h, "17 h 30 · Marlene récupère Juliette");
   ok("Relais accepté : le nom change seulement après acceptation, sur les deux comptes, sans recharger");
 
   // --- Sujet « Banque » ----------------------------------------------------
@@ -210,7 +210,7 @@ async function api(user, path, init = {}) {
   await shot(h, "05-sujet-banque");
   await see(c, "Suivi par Hugo");
   await see(c, "Renseignée par Hugo");
-  ok("Camille saisit « Banque », Hugo le prend et programme une relance jeudi ; Camille voit qui suit et la prochaine étape");
+  ok("Marlene saisit « Banque », Hugo le prend et programme une relance jeudi ; Marlene voit qui suit et la prochaine étape");
 
   // Tâche « Appeler la banque » : ajout, report, rendez-vous associé
   await tab(h, "Planning");
@@ -263,20 +263,20 @@ async function api(user, path, init = {}) {
   await notSee(h, "En retard");
   ok("Tâche en retard : « Demain » la reporte (actions Terminer / Demain / Choisir un jour présentes)");
 
-  // Passation : Hugo propose à Camille, il reste responsable jusqu'à l'acceptation
+  // Passation : Hugo propose à Marlene, il reste responsable jusqu'à l'acceptation
   await tab(h, "Listes");
   await h.getByText("Banque").first().click();
-  await h.getByRole("button", { name: "Proposer à Camille" }).click();
+  await h.getByRole("button", { name: "Proposer à Marlene" }).click();
   await see(h, "Proposé à");
-  await see(h, "Suivi par Toi"); // Hugo reste responsable tant que Camille n'a pas accepté
+  await see(h, "Suivi par Toi"); // Hugo reste responsable tant que Marlene n'a pas accepté
   await c.goto(`${APP}/planning`);
   await see(c, "On attend ta réponse");
   await see(c, "te propose de suivre");
   await c.getByRole("button", { name: "J’accepte" }).click();
   await see(c, "Mes suivis à relancer");
   await see(c, "En attente de la banque · relancer");
-  await see(h, "Suivi par Camille");
-  ok("Passation : Hugo reste responsable jusqu’à ce que Camille accepte, puis la relance passe chez elle");
+  await see(h, "Suivi par Marlene");
+  ok("Passation : Hugo reste responsable jusqu’à ce que Marlene accepte, puis la relance passe chez elle");
 
   // Clôture
   await c.getByText("En attente de la banque · relancer").click();
@@ -305,7 +305,7 @@ async function api(user, path, init = {}) {
   await see(h, "Dans le panier");
   assert.equal(await h.getByLabel("Décocher Lait").isChecked(), true);
   await shot(h, "09-courses-coche-par-camille");
-  ok("Lait dans Courses, ruban dans Bricolage ; Camille coche le lait et Hugo le voit sans recharger");
+  ok("Lait dans Courses, ruban dans Bricolage ; Marlene coche le lait et Hugo le voit sans recharger");
 
   // --- Idée cadeau partagée + surprise privée -------------------------------
   await c.goto(`${APP}/listes`);
@@ -325,10 +325,10 @@ async function api(user, path, init = {}) {
   await see(h, "Privée · visible par toi seul");
   await fab(h);
   await h.getByLabel("Idée", { exact: true }).fill("Week-end surprise");
-  await h.getByLabel("Pour qui ?", { exact: true }).fill("Camille");
+  await h.getByLabel("Pour qui ?", { exact: true }).fill("Marlene");
   await h.getByLabel("Occasion", { exact: true }).fill("Anniversaire");
   await h.getByRole("button", { name: "Ajouter l’idée" }).click();
-  await see(h, "Pour Camille · Anniversaire");
+  await see(h, "Pour Marlene · Anniversaire");
   await shot(h, "10-surprise-privee");
   const surpriseId = new URL(h.url()).searchParams.get("id");
 
@@ -336,7 +336,7 @@ async function api(user, path, init = {}) {
   await notSee(c, "Week-end surprise");
   await c.goto(`${APP}/listes/voir?id=${surpriseId}`);
   await see(c, "Liste introuvable");
-  // Via l'API, avec le jeton de Camille
+  // Via l'API, avec le jeton de Marlene
   const items = await api(CAMILLE, "list_items?select=*", { method: "GET" });
   assert.equal(items.status, 200);
   assert.ok(items.body.some((i) => i.label === "Livre de cuisine"));
@@ -349,7 +349,53 @@ async function api(user, path, init = {}) {
   assert.equal(ins.status, 403);
   const still = await api(HUGO, `list_items?select=label&list_id=eq.${surpriseId}`, { method: "GET" });
   assert.deepEqual(still.body.map((i) => i.label), ["Week-end surprise"]);
-  ok("Camille n’a aucun accès à la surprise de Hugo : ni dans l’app, ni en lecture, modification ou ajout via l’API");
+  ok("Marlene n’a aucun accès à la surprise de Hugo : ni dans l’app, ni en lecture, modification ou ajout via l’API");
+
+  // Liste privée créée depuis l'onglet Listes
+  await h.goto(`${APP}/listes`);
+  await h.getByRole("button", { name: "Nouvelle liste privée 🔒" }).click();
+  await h.getByPlaceholder("Ma liste perso").fill("Mes lectures");
+  await h.getByRole("button", { name: "Créer" }).click();
+  await see(h, "Mes listes privées 🔒");
+  await see(h, "Mes lectures");
+  await shot(h, "listes-section-privee");
+  await h.getByRole("link", { name: /Mes lectures/ }).click();
+  await see(h, "Privée · visible par toi seul");
+  await h.getByLabel("Article", { exact: true }).fill("Roman policier");
+  await h.getByRole("button", { name: "Ajouter l’article" }).click();
+  await h.getByLabel("Cocher Roman policier").check();
+  await see(h, "Tout est fait.");
+  await shot(h, "liste-privee");
+  const lecturesId = new URL(h.url()).searchParams.get("id");
+  // Copier vers une liste partagée : avertissement, pas de doublon, l'original reste
+  await h.getByLabel("Article", { exact: true }).fill("Pâtes");
+  await h.getByRole("button", { name: "Ajouter l’article" }).click();
+  await see(h, "Pâtes");
+  await h.getByLabel("Article", { exact: true }).fill("Café");
+  await h.getByRole("button", { name: "Ajouter l’article" }).click();
+  await see(h, "Café");
+  await h.getByRole("button", { name: "Copier vers une autre liste…" }).click();
+  await h.getByLabel("Liste de destination").selectOption({ label: "Courses (partagée)" });
+  await see(h, "verra les éléments copiés");
+  await see(h, "Copier 2 éléments");
+  await shot(h, "copier-vers-liste");
+  await h.getByRole("button", { name: "Copier 2 éléments" }).click();
+  await see(h, "2 éléments copiés dans « Courses »");
+  await see(h, "Pâtes");
+  await c.goto(`${APP}/listes`);
+  await c.getByRole("link", { name: /Courses/ }).click();
+  await see(c, "Pâtes");
+  assert.equal(await c.getByText("Roman policier").count(), 0);
+  ok("Copie d’une liste privée vers Courses : avertissement, l’autre voit les articles copiés, la liste privée reste intacte");
+  await tab(h, "Pour moi");
+  await see(h, "Mes lectures");
+  await c.goto(`${APP}/listes`);
+  await notSee(c, "Mes lectures");
+  await tab(c, "Pour moi");
+  await notSee(c, "Mes lectures");
+  const lectures = await api(CAMILLE, `list_items?select=*&list_id=eq.${lecturesId}`, { method: "GET" });
+  assert.deepEqual(lectures.body, []);
+  ok("Hugo crée une liste privée depuis Listes, la coche ; Marlene ne la voit nulle part, même via l’API");
 
   // Écritures directes interdites sur le planning (passage obligé par le serveur)
   const direct = await api(CAMILLE, "pickups?day=eq.2026-11-20", { method: "PATCH", body: JSON.stringify({ responsible_id: null }) });
@@ -376,9 +422,14 @@ async function api(user, path, init = {}) {
   await see(h, "↻ Chaque semaine");
   await see(h, "« Prendre l’ordonnance »");
   await h.getByLabel("Terminer Kiné").first().check();
+  // Une tâche cochée se replie : elle reste accessible sous « Voir les tâches faites ».
+  await see(h, "Voir les tâches faites (1)");
+  await shot(h, "taches-faites-repliees");
+  assert.equal(await h.getByLabel("Terminer Kiné").count(), 1);
+  await h.getByText("Voir les tâches faites (1)").click();
   await h.waitForFunction(() => document.querySelectorAll('input[aria-label="Terminer Kiné"]').length === 2, null, { timeout: 8000 });
   await shot(h, "12-recurrence-note");
-  ok("Petit mot et répétition : une fois « Kiné » terminée, la séance de la semaine suivante est créée");
+  ok("Petit mot et répétition : une fois « Kiné » terminée, elle se replie et la séance de la semaine suivante est créée");
 
   // Changer l'heure de la récupération du jour depuis la carte
   await tab(h, "Planning");
@@ -441,7 +492,7 @@ async function api(user, path, init = {}) {
   await notSee(c, "Cadeau secret");
   ok("Ajout depuis le planning : sujets à deux proposés, et « Juste moi » reste invisible pour l’autre");
 
-  // « Je m'en occupe » sur une tâche à deux : Camille la prend, Hugo voit son nom
+  // « Je m'en occupe » sur une tâche à deux : Marlene la prend, Hugo voit son nom
   await tab(c, "Planning");
   await c.getByRole("radio", { name: "Aujourd’hui" }).click();
   const rowC = c.locator("div.rounded-2xl", { hasText: "Réserver le gîte" }).last();
@@ -450,7 +501,7 @@ async function api(user, path, init = {}) {
   // Chez Hugo, elle quitte « Mes tâches du jour » sans recharger.
   await h.waitForFunction(() => !document.body.innerText.includes("Réserver le gîte"), null, { timeout: 8000 });
   await shot(c, "17-je-men-occupe");
-  ok("Tâche à deux : « Je m’en occupe » la donne à Camille ; elle quitte les tâches de Hugo sans recharger");
+  ok("Tâche à deux : « Je m’en occupe » la donne à Marlene ; elle quitte les tâches de Hugo sans recharger");
 
   // Vider ma tête : catégorie proposée, date floue à confirmer, doublon, boîte « À trier » privée
   await tab(h, "Planning");
@@ -476,9 +527,9 @@ async function api(user, path, init = {}) {
   await c.reload();
   await tab(c, "Pour moi");
   await notSee(c, "Rappeler la mutuelle");
-  // Tri : Hugo la confie à Camille, elle devient partagée
+  // Tri : Hugo la confie à Marlene, elle devient partagée
   await h.getByRole("button", { name: "Trier" }).click();
-  await h.getByRole("radiogroup", { name: "Pour qui" }).getByRole("radio", { name: "Camille" }).click();
+  await h.getByRole("radiogroup", { name: "Pour qui" }).getByRole("radio", { name: "Marlene" }).click();
   await h.getByRole("button", { name: "En faire une tâche" }).click();
   await see(h, "Rien à trier");
   await tab(c, "Planning");

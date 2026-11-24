@@ -37,7 +37,11 @@ export function ListLink({ list }: { list: List }) {
       <div className="min-w-0 flex-1">
         <div className="text-[16px] font-bold">{list.name}</div>
         <div className="text-sm text-slate-500">
-          {left} {list.kind === "gifts" ? (left > 1 ? "idées" : "idée") : left > 1 ? "articles à acheter" : "article à acheter"}
+          {left} {list.kind === "gifts"
+            ? left > 1 ? "idées" : "idée"
+            : list.is_private
+              ? left > 1 ? "éléments à faire" : "élément à faire"
+              : left > 1 ? "articles à acheter" : "article à acheter"}
         </div>
       </div>
       <FavStar list={list} />
@@ -53,7 +57,7 @@ export function NewListForm({ isPrivate = false }: { isPrivate?: boolean }) {
   if (!open)
     return (
       <Button kind="secondary" className="w-full" onClick={() => setOpen(true)}>
-        {isPrivate ? "Nouvelle liste privée" : "Nouvelle liste"}
+        {isPrivate ? "Nouvelle liste privée 🔒" : "Nouvelle liste partagée"}
       </Button>
     );
   const submit = async (e: React.FormEvent) => {
@@ -66,6 +70,7 @@ export function NewListForm({ isPrivate = false }: { isPrivate?: boolean }) {
         kind: gifts ? "gifts" : "items",
         is_private: isPrivate,
       }),
+      isPrivate ? "Liste privée créée, visible par toi seul" : undefined,
     );
     if (ok !== null) {
       setName("");
@@ -74,7 +79,7 @@ export function NewListForm({ isPrivate = false }: { isPrivate?: boolean }) {
   };
   return (
     <form onSubmit={submit} className="space-y-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
-      <Input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder={isPrivate ? "Surprises pour Camille" : "Pharmacie"} />
+      <Input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder={isPrivate ? "Ma liste perso" : "Pharmacie"} />
       <label className="flex items-center gap-3 text-[15px]">
         <input type="checkbox" className="h-5 w-5" checked={gifts} onChange={(e) => setGifts(e.target.checked)} />
         Liste d’idées cadeaux
